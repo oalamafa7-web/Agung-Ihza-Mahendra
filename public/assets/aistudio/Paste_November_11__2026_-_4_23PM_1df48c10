@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e3a8a">
+<title>Performance Assessment SOP</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f1f5f9;--card:#fff;--pri:#1e40af;--pri2:#3b82f6;--txt:#0f172a;--mut:#64748b;--g:#16a34a;--y:#eab308;--r:#dc2626;--bd:#e2e8f0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:16px}
+header.top{position:sticky;top:0;z-index:30;height:60px;background:linear-gradient(90deg,#1e3a8a,#2563eb);color:#fff;padding:0 18px;display:flex;align-items:center;justify-content:space-between}
+header.top b{font-size:18px}
+main{padding:16px;max-width:1400px;margin:auto}
+.btn{border:1px solid var(--bd);background:#fff;color:var(--txt);border-radius:12px;padding:10px 16px;font-size:16px;font-weight:600;min-height:48px;cursor:pointer}
+.btn.primary{background:var(--pri);color:#fff;border-color:var(--pri)}
+.btn.danger{color:var(--r)}
+.btn.red{background:var(--r);color:#fff;border-color:var(--r)}
+.btn:disabled{opacity:.45}
+.btn:active{transform:scale(.97)}
+.big{font-size:18px;padding:14px 24px}
+.inp{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;font-size:16px;min-height:48px;background:#fff;color:var(--txt)}
+.hero{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.hero h1{margin:0;font-size:26px}.hero p{margin:4px 0 0;color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:0 1px 3px #0001;border-left:6px solid var(--pri2)}
+.kpi .l{font-size:13px;color:var(--mut);font-weight:600}.kpi .v{font-size:28px;font-weight:800;margin-top:4px}.kpi .s{font-size:12px;color:var(--mut)}
+.kpi.g{border-color:var(--g)}.kpi.g .v{color:var(--g)}.kpi.y{border-color:var(--y)}.kpi.y .v{color:#a16207}.kpi.r{border-color:var(--r)}.kpi.r .v{color:var(--r)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.toolbar #q{flex:1;min-width:220px}
+.selbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;background:#eff6ff;border:2px solid var(--pri2);border-radius:14px;padding:10px 14px;margin-bottom:14px;position:sticky;top:66px;z-index:15}
+.selbar b{font-size:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 1px 3px #0001;margin-bottom:14px}
+.grid .card{margin:0}
+.card h3{margin:0 0 6px;font-size:18px}
+.sess{cursor:pointer;border-top:5px solid var(--pri2);transition:.15s}.sess:active{transform:scale(.98)}
+.sess.picked{outline:3px solid var(--pri);background:#eff6ff}
+.pickmark{font-size:28px;line-height:1}
+.line{font-size:30px;font-weight:800;color:var(--pri)}
+.badge{background:#dbeafe;color:#1e40af;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.meta{color:var(--mut);font-size:14px;margin-top:6px}
+.row{display:flex;align-items:center;gap:8px}.sb{justify-content:space-between}.wrap{flex-wrap:wrap}
+.bar{height:12px;background:#e2e8f0;border-radius:99px;overflow:hidden;flex:1;min-width:60px}.bar i{display:block;height:100%;border-radius:99px}
+i.g{background:var(--g)}i.y{background:var(--y)}i.r{background:var(--r)}
+.t-g{color:var(--g)}.t-y{color:#a16207}.t-r{color:var(--r)}
+.delbtn{border:1px solid #fecaca;background:#fef2f2;color:var(--r);border-radius:10px;min-height:44px;padding:0 12px;font-size:14px;font-weight:700;cursor:pointer}
+.empty{text-align:center;color:var(--mut);padding:40px 16px}
+.foot{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.shead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.stitle{flex:1;min-width:200px}.stitle h2{margin:0;font-size:24px;display:flex;gap:8px;align-items:center}
+.sact{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;gap:8px;overflow-x:auto;position:sticky;top:60px;z-index:20;background:var(--bg);padding:10px 0}
+.tabs button{border:none;background:#fff;border-radius:12px;padding:12px 18px;font-size:16px;font-weight:700;min-height:48px;white-space:nowrap;cursor:pointer;color:var(--mut)}
+.tabs button.on{background:var(--pri);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:820px){.two{grid-template-columns:1fr}}
+.brow{display:grid;grid-template-columns:minmax(120px,1.4fr) 2fr 120px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--bd);font-size:14px}
+.brow .bv{text-align:right;font-weight:700}.brow small{color:var(--mut);font-weight:400}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;flex:1}
+.chip{white-space:nowrap;border:1px solid var(--bd);background:#fff;border-radius:999px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;min-height:44px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.dot.g{background:var(--g)}.dot.y{background:var(--y)}.dot.r{background:var(--r)}.dot.n{background:#cbd5e1}
+.bh{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.bmeta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:14px;color:var(--mut)}
+.bmeta select{max-width:320px}
+.bp{text-align:right;font-weight:800;font-size:22px}.bp small{display:block;font-size:12px;color:var(--mut);font-weight:500}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--bd);border-radius:12px}
+table.ck{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+.ck th,.ck td{border-bottom:1px solid var(--bd);border-right:1px solid var(--bd);padding:8px;font-size:14px;background:#fff;vertical-align:middle}
+.ck thead th{background:#1e3a8a;color:#fff}
+.ck .sn{position:sticky;left:0;z-index:2;width:48px;min-width:48px;text-align:center;font-weight:700;cursor:pointer}
+.ck .st{position:sticky;left:48px;z-index:2;min-width:230px;max-width:290px;white-space:normal}
+.ck th.op{min-width:96px;max-width:120px;font-size:12px;white-space:normal;cursor:pointer;text-align:center}
+.ck td.cb{text-align:center;font-size:30px;cursor:pointer;user-select:none;color:#94a3b8;padding:2px;min-width:96px}
+.ck td.cb.on{background:#dcfce7;color:var(--g)}
+.ck tfoot td{font-weight:700;text-align:center;background:#f8fafc}
+.pic{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:#e2e8f0;white-space:nowrap}
+.pic-pso{background:#fef3c7;color:#92400e}.pic-ie{background:#dbeafe;color:#1e40af}.pic-qc{background:#fce7f3;color:#9d174d}.pic-mekanik{background:#e0e7ff;color:#3730a3}
+table.tbl{border-collapse:collapse;width:100%;font-size:14px}
+.tbl th{background:#f8fafc;text-align:left;padding:10px;border-bottom:2px solid var(--bd);position:sticky;top:0}
+.tbl td{padding:10px;border-bottom:1px solid var(--bd)}
+.tbl .n{text-align:right}
+.hchart{display:flex;align-items:flex-end;gap:8px;height:220px;padding-top:20px}
+.hc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:40px}
+.hc i{width:100%;background:var(--pri2);border-radius:8px 8px 0 0}.hc b{font-size:12px}.hc small{font-size:10px;color:var(--mut);text-align:center;margin-top:4px}
+.info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;font-size:14px;color:#1e3a8a;margin-bottom:14px}
+.legend{font-size:13px;color:var(--mut)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(140px);background:#0f172a;color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;transition:.3s;z-index:99;max-width:92vw;display:flex;gap:12px;align-items:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+.tbtn{background:#facc15;color:#0f172a;border:none;border-radius:10px;padding:10px 14px;font-weight:800;font-size:15px;min-height:44px;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top"><b>🏭 SOP Assessment • Line Production</b><span id="clock"></span></header>
+<main id="app"></main>
+<input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" multiple hidden>
+<input type="file" id="backupFile" accept=".json" hidden>
+<div id="toast"></div>
+<script>
+/* ================= TEMPLATE SOP BAWAAN ================= */
+const NEEDLE='Pergantian jarum : Washing 2x sehari, Normal dua hari 1x', RC='Random check (5 Pcs), Jika sudah ok lanjut.';
+const HTL=[['Standard waktu 8 detik, Suhu 165%, Pressure Gap 2 Kg, Walmart : 3,5 kg','PSO'],['Cold feel : copot saat dingin dan Hot Feel : dicpot pada saat masih panas.','PSO'],['Bantalan harus bersih dan pattern harus terlihat dengan jelas','PSO'],['Waktu preparation harus sama dengan machine time','IE'],['Label selalu dipegang ditangan kiri','IE'],['Bantalan kiri dan kanan harus digunakan pada saat yang bersamaan.','IE'],['Bundle berisi 5 pcs garment','IE']];
+const HEM=[[NEEDLE,'PSO'],['Pastikan tidak ada benang sisa di bagian atas','IE'],['Tidak ada rawedge.','IE'],['Tarik benang sisa dan potong dengan vacuum hanya sekali','IE'],[RC,'IE'],['Panel dimasukkan ke sepatu mesin, kemudian jahit sedikit, angkat panel dengan tangan kiri, tangan kanan mengatur lipatan panel lalu jahit sekali jahitan','IE'],['Pastikan pakai angin.','Mekanik'],['Standard RPM 4500','Mekanik'],['Jogi pastikan harus kuat.','Mekanik'],['Wajib harus ada Vacuum Trimer','Mekanik']];
+const BUILTIN=[
+{key:'tshirt',name:'T-Shirt',builtin:true,blocks:[
+ {t:'Heat Seal Label - HTL',m:'Heat transfer main-label(HT main label)',i:HTL},
+ {t:'Join Neck end to end - Single needle',m:'Join & tack neck binding end (Gabung neck binding end)',i:[['Ada pattern yang menempel di meja dekat sepatu mesin','PSO'],[NEEDLE,'PSO'],['Jahit dengan sambungan, tidak dipotong per pcs','IE'],['Jahit tidak perlu berhenti.','IE'],['Standard RPM 5000','Mekanik'],['Mengunakan mesin SNSC (cutter)','Mekanik']]},
+ {t:'Join Neck Edge to Edge - Overlock',m:'',i:[['Standar RPM 5500','Mekanik'],[NEEDLE,'PSO'],['Penyimpanan setelah jahit di simpan di pergelangan tangan kiri','IE'],['Jahit tidak perlu berhenti.','IE'],['Tidak ada potong benang sisa','IE']]},
+ {t:'Join Shoulder - Overlock',m:'Join shoulder w/ mobilon x2(Gabung bahu)',i:[[NEEDLE,'PSO'],['Pengambilan harus dengan 2 tangan','IE'],['Jahit dengan sambung untuk shoulder yang menggunakan mobilon','IE'],['Potong per pcs menggunakan vacuum untuk shoulder tanpa mobilon','IE'],[RC,'IE'],['Jahit tidak perlu berhenti.','IE'],['Tidak ada potong benang sisa','IE'],['Standard RPM 5500','Mekanik'],['Jogi pastikan harus kuat.','Mekanik']]},
+ {t:'Attach Neck - Overlock',m:'Attach neck binding(Pasang neck binding)',i:[[NEEDLE,'PSO'],['Panel neck disimpan di pergelangan tangan kiri','IE'],['Stop point 1x untuk membenarkan tulang','IE'],['Tarik sisa benang lalu potong benang hanya 1x.','IE'],[RC,'IE'],['Potong jahitan wajib menggunakan Vacuum Trimer','IE'],['Standard RPM 5500','Mekanik'],['Menggunakan mesin obras roller.','Mekanik'],['Jogi pastikan harus kuat dibaut kiri dan kanan.','Mekanik']]},
+ {t:'Attach Back Neck Tape - Single Needle, double needle & Overdeck',m:'',i:[[NEEDLE,'PSO'],['Maksimal stop point 2x (tergantung panjang jahitan) untuk mesin single needle & overdeck','IE'],['Jahit dengan sambung untuk penggunaan mesin overdeck','IE'],['Potong neck tape dengan gunting per pcs untuk mesin single & double needle','IE'],[RC,'IE'],['Standard RPM single & double needle 5000','Mekanik'],['Standard RPM overdeck 4500','Mekanik'],['Corong back neck tape pastikan harus kuat.','Mekanik'],['Menggunakan backtack auto diawal dan diakhir jahit','Mekanik'],['Menggunakan jogi mika/magnet','Mekanik']]},
+ {t:'Topstitch Back Neck Tape - Single Needle',m:'',i:[[NEEDLE,'PSO'],['Maksimal stop point 3x (tergantung panjang jahitan)','IE'],['Potong sisa neck tape di kedua sisi sebelum jahit','IE'],[RC,'IE'],['Standard RPM 5000','Mekanik'],['Corong back neck tape pastikan harus kuat.','Mekanik'],['Menggunakan backtack auto diawal dan diakhir jahit','Mekanik'],['Menggunakan jogi mika','Mekanik']]},
+ {t:'Attach Sleeve - Overlock',m:'Attach short sleeve x2(Pasang lengan pendek)',i:[[NEEDLE,'PSO'],['Diletakkan 5pcs perbundle','IE'],['Stop point 4x (2 stop point untuk masing-masing sisi)','IE'],['Tidak ada potong benang sisa','IE'],[RC,'IE'],['Standard RPM 5500','Mekanik'],['Ada meja tambahan untuk peletakkan panel tangan disebelah kanan mesin jahit','Mekanik'],['Jogi pastikan harus kuat dibaut kiri dan kanan.','Mekanik']]},
+ {t:'Join Side Seam - Overlock',m:'Join short sleeve & side seam x2(Gabung  samping)',i:[[NEEDLE,'PSO'],['Hasil jahitan tidak boleh panjang pendek antara body depan dan belakang','QC'],['Stop point 5x untuk short sleeve & long sleeve (sebelum armpit, setelah armpit, dan sebelum pemasangan care label di sebelah kiri)','IE'],['Stop point 4x untuk short sleeve & long sleeve tanpa care label (sebelum armpit dan setelah armpit)','IE'],['Stop point 1x untuk tanktop (Sebelum care label)','IE'],['Sekali jahit untuk tanktop tanpa care label','IE'],['Diletakkan 5pcs perbundle','IE'],['Tidak ada potong benang sisa','IE'],['Pengambilan panel dengan 2 tangan langsung ke sleeve','IE'],['Penempatan diletakkan dekat dengan mesin jahit','IE'],[RC,'IE'],['Standard RPM 5500','Mekanik'],['Penambahan spiral untuk t-label','Mekanik'],['Jogi pastikan harus kuat dibaut kiri dan kanan.','Mekanik'],['Penambahan jogi koin untuk jenis fabric yang melintir','Mekanik']]},
+ {t:'Hem Bottom - Overdeck',m:'Hem bottom(Hemming bawah)',i:HEM},
+ {t:'Hem Sleeve - Overdeck',m:'Hem short sleeve x2(Hemming lengan pendek)',i:HEM}
+]},
+{key:'legging',name:'Legging',builtin:true,blocks:[
+ {t:'Heat transfer main-label(HT main-label) - HTL',m:'Heat transfer main-label(HT main-label)',i:HTL},
+ {t:'Join inseams x2(Gabung inseam) - Overlock',m:'Join inseams x2(Gabung inseam)',i:[[NEEDLE,'PSO'],[RC,'QC'],['Hasil jahitan tidak boleh panjang pendek antara body depan dan belakang','QC'],['Pengambilan langsung ke bagian yang akan dijahit','IE'],['Peletakan panel harus dekat dengan machine','IE'],['Jari dimasukan ke sela- sela panel','IE'],['Tidak perlu potong benang','IE'],['Size kecil tidak berhenti, size besar satu kali berhenti','IE'],['Standard RPM 5500','Mekanik'],['Menggunakan jogi lurus','Mekanik']]},
+ {t:'Join outseam - Overlock',m:'',i:[[NEEDLE,'PSO'],[RC,'QC'],['Hasil jahitan tidak boleh panjang pendek antara body depan dan belakang','QC'],['Pengambilan langsung 2 panel sekaligus','IE'],['Jari dimasukan ke sela- sela panel','IE'],['Tidak perlu potong benang','IE'],['Peletakan panel harus dekat dengan machine','IE'],['Size kecil tidak berhenti, size besar satu kali berhenti','IE'],['Standard RPM 5500','Mekanik'],['Menggunakan jogi lurus','Mekanik']]},
+ {t:'Join rises(Gabung rise) - Overlock',m:'Join rises(Gabung rise)',i:[[NEEDLE,'PSO'],[RC,'QC'],['Peletakan panel harus dekat dengan machine','IE'],['Pengambilan langsung ke bagian yang akan dijahit','IE'],['Dua kali berhenti : sebelum crotch dan setelah crotch','IE'],['Tidak perlu potong benang','IE'],['Menggunakan jogi melengkung','Mekanik'],['Standard RPM 5500','Mekanik']]},
+ {t:'Tack center crotch(Bartek tengah crotch) - BT',m:'Tack center crotch(Bartek tengah crotch)',i:[[NEEDLE,'PSO'],[RC,'QC'],['Peletakan panel dipaha','IE'],['Pengambilan langsung ke bagian yang akan dijahit','IE'],['Penyimpanan di meja sebelah machine','IE']]},
+ {t:'Attach eband to body + mark eband(Pasang elastik ke bodi) - Overlock',m:'Attach eband to body + mark eband(Pasang elastik ke bodi)',i:[[NEEDLE,'PSO'],['Penambahan pattern untuk elastik (check random)','QC'],[RC,'QC'],['Peletakan panel harus dekat dengan machine','IE'],['Peletakan elastic di pergelangan tangan','IE'],['Ditambah proses marking elastik (penambahan akrilik + kapur)','IE'],['Satu kali berhenti untuk geser seam/tulang (tidak ada outseam), dua kali berhenti (ada outseam)','IE'],['Gunting selalu di tangan kanan','IE'],['Perlu potong benang di akhir','IE'],['Menggunakan roller','Mekanik'],['Standard RPM 5500','Mekanik'],['Menggunakan mesin cylinder bed / kepala kecil','Mekanik']]},
+ {t:'Topstitch waistband(Stik tutup waistband) - Overdeck',m:'Topstitch waistband(Stik tutup waistband)',i:[[NEEDLE,'PSO'],[RC,'QC'],['Peletakan panel harus dekat dengan machine','IE'],['Jahit tidak berhenti','IE'],['Gunting selalu di tangan kanan','IE'],['Gunting benang cukup sekali','IE'],['Menggunakan roller','Mekanik'],['Standard RPM 4500','Mekanik']]},
+ {t:'Hem bottom x2(Hemming bawah) - Overdeck',m:'Hem bottom x2(Hemming bawah)',i:[[NEEDLE,'PSO'],[RC,'QC'],['Peletakan panel harus dekat dengan machine (dengan perbundle)','IE'],['Tidak berhenti (tidak ada outseam), satu kali berhenti (ada outseam)','IE'],['Gunting menggunakan vacuum trimmer','IE'],['Penyimpanan panel setelah jahit dilipat ke atas','IE'],['Gunting cukup sekali','IE'],['Tidak ada potong row edge','IE'],['Bundle maksimal 10 pcs dan selesaikan jahitan satu sisi terlebih dahulu','IE'],['Wajib harus ada vacuum trimmer','Mekanik'],['Pastikan ada angin','Mekanik'],['Standard RPM 4500','Mekanik'],['Menggunakan mesin cylinder bed / kepala kecil','Mekanik']]}
+]}];
+
+/* ================= STORAGE & UTIL ================= */
+const LS_S='sopa_sessions_v1', LS_T='sopa_templates_v1';
+const clone=o=>JSON.parse(JSON.stringify(o));
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+let sessions=load(LS_S,[]), templates=load(LS_T,null)||clone(BUILTIN), trash=[];
+function save(){try{localStorage.setItem(LS_S,JSON.stringify(sessions));localStorage.setItem(LS_T,JSON.stringify(templates));}catch(e){toast('⚠️ Penyimpanan penuh, lakukan Backup lalu hapus sesi lama')}}
+let state={view:'home',sid:null,tab:'dash',q:'',fprod:'',sort:'new',tplOpen:null,showAll:false,selMode:false,sel:[]};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s??'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const num=v=>(v===''||v==null||isNaN(+v))?null:+v;
+const fmtN=v=>v==null?'-':Number(v).toLocaleString('id-ID');
+const pctTxt=x=>(x*100).toFixed(1)+'%';
+const cls=x=>x>=.9?'g':x>=.6?'y':'r';
+const cleanT=t=>String(t).replace(/\s*:\s*$/,'').trim();
+const key=(bi,ii,n)=>bi+'|'+ii+'|'+n;
+const pad=n=>String(n).padStart(2,'0');
+const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const fmtD=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${+m[3]} ${BLN[+m[2]-1]} ${m[1]}`:(d||'-')};
+function toYMD(v){
+  if(v==null||v==='')return '';
+  if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);return d?`${d.y}-${pad(d.m)}-${pad(d.d)}`:''}
+  const s=String(v).trim();let m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  m=s.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);if(m)return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;return s;
+}
+function toast(m,undo){
+  const t=$('#toast');t.innerHTML=`<span>${esc(m)}</span>${undo?'<button class="tbtn" data-act="undo">↩️ Urungkan</button>':''}`;
+  t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>{t.classList.remove('show');if(undo)trash=[]},undo?8000:3000);
+}
+function download(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+
+/* ================= LOGIKA ================= */
+const cur=()=>sessions.find(s=>s.id===state.sid);
+const tplOf=s=>templates.find(t=>t.key===s.tpl)||{name:'(template tidak ada)',blocks:[]};
+const procs=s=>[...new Set(s.ops.map(o=>o.process))];
+function autoMatch(title,P){
+  let t=norm(cleanT(title).replace(/\s*-\s*[A-Za-z ,&\/]+$/,''));if(t.length<5)return '';
+  return P.find(p=>norm(p)===t)||P.find(p=>{const q=norm(p);return q.length>=5&&(q.includes(t)||t.includes(q))})||'';
+}
+function blockProc(s,bi,b,P){
+  P=P||procs(s);
+  if(s.map&&Object.prototype.hasOwnProperty.call(s.map,bi))return s.map[bi];
+  if(b.m){const f=P.find(p=>norm(p)===norm(b.m));if(f)return f}
+  return autoMatch(b.t,P);
+}
+function stats(s){
+  const t=tplOf(s),P=procs(s);let total=0,done=0;const per={};
+  const blocks=t.blocks.map((b,bi)=>{
+    const p=blockProc(s,bi,b,P);
+    const ops=p?[...new Set(s.ops.filter(o=>o.process===p).map(o=>o.name))]:[];
+    let d=0;
+    ops.forEach(n=>{per[n]=per[n]||{name:n,tot:0,done:0,proc:[]};per[n].tot+=b.i.length;per[n].proc.push(cleanT(b.t));
+      b.i.forEach((_,ii)=>{if(s.checks[key(bi,ii,n)]){d++;per[n].done++}})});
+    const tot=ops.length*b.i.length;total+=tot;done+=d;
+    return {b,bi,p,ops,tot,done:d,pct:tot?d/tot:0};
+  });
+  const active=blocks.filter(x=>x.ops.length);
+  const used=new Set(active.map(x=>x.p));
+  return {blocks,active,used,total,done,pending:total-done,pct:total?done/total:0,
+    opCount:Object.keys(per).length,procCount:active.length,per:Object.values(per)};
+}
+const sopOps=(s,st)=>s.ops.filter(o=>st.used.has(o.process));
+
+/* ================= HAPUS SESI ================= */
+function deleteSessions(ids){
+  const del=sessions.filter(s=>ids.includes(s.id));if(!del.length)return;
+  const msg=del.length===1?`Hapus sesi Line ${del[0].line} (${fmtD(del[0].date)})?\nSemua checklist sesi ini ikut terhapus.`
+    :`Hapus ${del.length} sesi terpilih?\nSemua checklist sesi tersebut ikut terhapus.`;
+  if(!confirm(msg))return;
+  sessions=sessions.filter(s=>!ids.includes(s.id));trash=del;
+  if(ids.includes(state.sid)){state.view='home';state.sid=null}
+  state.selMode=false;state.sel=[];save();render();
+  toast(`🗑️ ${del.length} sesi dihapus`,true);
+}
+
+/* ================= PARSING EXCEL ================= */
+const COLS={dt:['dt','date','tanggal'],line:['line'],file:['file','fileno'],style:['style','styleno'],seq:['seq'],process:['process','proses'],
+  machine:['machine','mesin'],counter:['counter','counterno'],mc:['machinecode'],uid:['userid','nik'],name:['username','nama','operator'],
+  target:['targetqty','target'],actual:['actualqty','actual','output'],avg:['avgqty','avg'],wt:['worktime']};
+function findHeader(rows){for(let i=0;i<Math.min(rows.length,30);i++){const n=(rows[i]||[]).map(norm);if(n.includes('process')&&n.includes('username'))return i}return -1}
+function parseDB(rows,h,sn,fn){
+  const H=rows[h],idx={};
+  H.forEach((c,i)=>{const n=norm(c);for(const k in COLS)if(idx[k]===undefined&&COLS[k].includes(n))idx[k]=i});
+  const used=Object.values(idx),hourCols=[];
+  H.forEach((c,i)=>{const s=String(c);if(/\d{1,2}[:.]\d{2}/.test(s)&&!used.includes(i))hourCols.push({i,l:s.replace(/\s*\n\s*/g,'-').replace(/\s*~\s*/g,'-')})});
+  const ops=[],first={};
+  for(let r=h+1;r<rows.length;r++){
+    const R=rows[r]||[],g=k=>idx[k]===undefined?'':(R[idx[k]]??'');
+    ['dt','line','file','style'].forEach(k=>{const v=g(k);if(first[k]===undefined&&v!=='')first[k]=v});
+    const process=String(g('process')).trim(),name=String(g('name')).trim();
+    if(!process||!name)continue;
+    ops.push({seq:String(g('seq')).trim(),process,machine:String(g('machine')).trim(),counter:String(g('counter')).trim(),mc:String(g('mc')).trim(),
+      uid:String(g('uid')).trim(),name,target:num(g('target')),actual:num(g('actual')),avg:num(g('avg')),wt:num(g('wt')),h:hourCols.map(c=>num(R[c.i]))});
+  }
+  const keep=hourCols.map((c,j)=>ops.some(o=>o.h[j]!==null));
+  ops.forEach(o=>o.h=o.h.filter((_,j)=>keep[j]));
+  let line=String(first.line||'').trim();
+  if(!line){const c=ops.find(o=>/^[\w]+-/.test(o.counter));line=c?c.counter.split('-')[0]:sn.trim()}
+  return {id:'s'+Date.now()+Math.random().toString(36).slice(2,7),line,date:toYMD(first.dt),file:String(first.file||'').trim(),
+    style:String(first.style||'').trim(),fileName:fn,sheet:sn.trim(),ops,hours:hourCols.filter((_,j)=>keep[j]).map(c=>c.l),
+    tpl:guessTpl(sn,[...new Set(ops.map(o=>o.process))]),map:{},checks:{},bdate:{},created:Date.now()};
+}
+function parseSOP(rows){
+  const blocks=[],map={};
+  for(let r=0;r<rows.length;r++){const row=rows[r]||[];
+    for(let c=0;c<row.length-2;c++){
+      if(String(row[c]).trim()==='No.'&&String(row[c+2]).trim().toUpperCase()==='PIC'&&String(row[c+1]).trim()){
+        const b={t:cleanT(row[c+1]),m:'',i:[],_raw:String(row[c+1]).trim()};let k=r+1;
+        while(k<rows.length){const x=rows[k]||[],no=x[c];if(no===''||no==null||isNaN(Number(no)))break;
+          b.i.push([String(x[c+1]??'').replace(/\s*\n\s*/g,' ').trim(),String(x[c+2]??'').trim()]);k++}
+        if(b.i.length)blocks.push(b);break;
+      }
+      if(/^proses di/i.test(String(row[c]).trim())&&/^proses di/i.test(String(row[c+1]).trim())){
+        for(let k=r+1;k<rows.length;k++){const a=String((rows[k]||[])[c]??'').trim();if(!a)break;map[norm(a)]=String(rows[k][c+1]??'').trim()}
+      }
+    }
+  }
+  blocks.forEach(b=>{b.m=map[norm(b._raw)]||'';delete b._raw});
+  return blocks;
+}
+function guessTpl(sheetName,P){
+  const sn=norm(sheetName),PN=P.map(norm);let best='',score=-1;
+  templates.forEach(t=>{let sc=0;if(norm(t.name)&&sn.includes(norm(t.name)))sc+=100;
+    t.blocks.forEach(b=>{if(b.m&&PN.includes(norm(b.m)))sc+=2;else if(autoMatch(b.t,P))sc+=1});
+    if(sc>score){score=sc;best=t.key}});
+  return best;
+}
+function upsertTpl(name,blocks){
+  const ex=templates.find(t=>norm(t.name)===norm(name));
+  if(ex){ex.blocks=blocks}else templates.push({key:'tpl_'+norm(name)+'_'+Date.now(),name,blocks});
+}
+function addSession(s){
+  const dup=sessions.find(x=>x.line===s.line&&x.file===s.file&&x.date===s.date&&x.tpl===s.tpl);
+  if(dup){if(confirm(`Sesi Line ${s.line} (${fmtD(s.date)}) sudah ada.\nUpdate data operator? Checklist yang sudah diisi tetap disimpan.`)){dup.ops=s.ops;dup.hours=s.hours;dup.fileName=s.fileName;return 1}return 0}
+  sessions.unshift(s);return 1;
+}
+async function handleFiles(files){
+  let ns=0,nt=0;
+  for(const f of files){
+    try{
+      const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+      const sheets=wb.SheetNames.map(sn=>({sn,rows:XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:'',raw:true})}));
+      sheets.forEach(({sn,rows})=>{if(findHeader(rows)>=0)return;const b=parseSOP(rows);if(b.length){upsertTpl(sn.trim(),b);nt++}});
+      sheets.forEach(({sn,rows})=>{const h=findHeader(rows);if(h<0)return;const s=parseDB(rows,h,sn,f.name);if(s.ops.length)ns+=addSession(s)});
+    }catch(err){console.error(err);toast('❌ Gagal membaca '+f.name)}
+  }
+  save();render();toast(`✅ ${ns} sesi ditambahkan/diupdate • ${nt} template SOP diperbarui`);
+}
+
+/* ================= VIEW: HOME ================= */
+const kpi=(l,v,c='',s='')=>`<div class="kpi ${c}"><div class="l">${l}</div><div class="v">${v}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+function viewHome(){
+  const all=sessions.map(s=>stats(s)),tp=all.reduce((a,x)=>a+x.total,0),td=all.reduce((a,x)=>a+x.done,0);
+  return `<section class="hero"><div><h1>📊 Performance Assessment SOP</h1><p>Upload database line (Excel) → otomatis menjadi sesi & dashboard</p></div>
+  <button class="btn primary big" data-act="upload">⬆️ Upload Excel</button></section>
+  <div class="kpis">${kpi('🗂️ Total Sesi',sessions.length)}${kpi('🏭 Jumlah Line',new Set(sessions.map(s=>s.line)).size)}
+  ${kpi('👥 Total Operator',all.reduce((a,x)=>a+x.opCount,0))}${kpi('🎯 Rata-rata Compliance',tp?pctTxt(td/tp):'-',tp?cls(td/tp):'',`${fmtN(td)} / ${fmtN(tp)} check point`)}</div>
+  <div class="toolbar"><input id="q" class="inp" placeholder="🔍 Cari line / file / style / tanggal..." value="${esc(state.q)}">
+  <select class="inp" data-chg="fprod"><option value="">Semua produk</option>${templates.map(t=>`<option value="${esc(t.key)}" ${state.fprod===t.key?'selected':''}>${esc(t.name)}</option>`).join('')}</select>
+  <select class="inp" data-chg="sort">${[['new','Terbaru'],['line','Line A-Z'],['low','Compliance terendah']].map(([k,l])=>`<option value="${k}" ${state.sort===k?'selected':''}>${l}</option>`).join('')}</select>
+  ${sessions.length?`<button class="btn ${state.selMode?'primary':''}" data-act="selmode">☑️ ${state.selMode?'Selesai':'Pilih'}</button>`:''}</div>
+  <div id="list">${listHtml()}</div>
+  <div class="foot"><button class="btn" data-act="tpl">📚 Template SOP (${templates.length})</button><button class="btn" data-act="backup">💾 Backup Data</button><button class="btn" data-act="restore">♻️ Restore Data</button></div>`;
+}
+function filtered(){
+  const q=state.q.toLowerCase();
+  let L=sessions.map(s=>({s,st:stats(s),t:tplOf(s)})).filter(({s,t})=>(!state.fprod||s.tpl===state.fprod)&&
+    (!q||[s.line,s.file,s.style,s.date,fmtD(s.date),t.name,s.fileName].join(' ').toLowerCase().includes(q)));
+  if(state.sort==='line')L.sort((a,b)=>a.s.line.localeCompare(b.s.line,'id',{numeric:true}));
+  else if(state.sort==='low')L.sort((a,b)=>a.st.pct-b.st.pct);
+  else L.sort((a,b)=>(b.s.date||'').localeCompare(a.s.date||'')||b.s.created-a.s.created);
+  return L;
+}
+function listHtml(){
+  const L=filtered(),n=state.sel.length;
+  const selbar=state.selMode?`<div class="selbar"><b>☑️ ${n} sesi dipilih</b><div class="row wrap">
+    <button class="btn" data-act="selall">${L.length&&L.every(x=>state.sel.includes(x.s.id))?'Batal pilih semua':'Pilih semua'} (${L.length})</button>
+    <button class="btn red" data-act="delsel" ${n?'':'disabled'}>🗑️ Hapus (${n})</button>
+    <button class="btn" data-act="selmode">Batal</button></div></div>`:'';
+  if(!L.length)return selbar+`<div class="card empty">${sessions.length?'Tidak ada sesi yang cocok.':'📂 Belum ada sesi.<br><br>Tekan <b>Upload Excel</b> lalu pilih file database line production.<br>Setiap sheet database (Process, User Name, Target Qty, ...) menjadi 1 sesi.'}</div>`;
+  return selbar+`<div class="grid">${L.map(({s,st,t})=>{const pk=state.sel.includes(s.id);return `<div class="card sess ${pk?'picked':''}" data-act="open" data-id="${s.id}">
+    <div class="row sb"><span class="line">${esc(s.line)}</span><div class="row"><span class="badge">${esc(t.name)}</span>
+    ${state.selMode?`<span class="pickmark">${pk?'☑':'☐'}</span>`:`<button class="delbtn" data-act="del" data-id="${s.id}">🗑️ Hapus</button>`}</div></div>
+    <div class="meta">📅 ${fmtD(s.date)} · 📁 ${esc(s.file||'-')} · 👕 ${esc(s.style||'-')}</div>
+    <div class="meta">👥 ${st.opCount} operator · ⚙️ ${st.procCount} proses SOP</div>
+    <div class="row" style="margin-top:12px"><div class="bar"><i class="${cls(st.pct)}" style="width:${st.pct*100}%"></i></div><b class="t-${cls(st.pct)}">${pctTxt(st.pct)}</b></div>
+    <div class="meta">☑ ${st.done} sudah · ☐ ${st.pending} belum</div></div>`}).join('')}</div>`;
+}
+
+/* ================= VIEW: SESI ================= */
+function viewSession(){
+  const s=cur(),st=stats(s),t=tplOf(s);
+  const tabs=[['dash','📊 Dashboard'],['check','☑️ Checklist'],['out','📈 Output'],['data','🗃️ Data']];
+  return `<div class="shead"><button class="btn" data-act="home">← Sesi</button>
+  <div class="stitle"><h2>Line ${esc(s.line)} <span class="badge">${esc(t.name)}</span></h2><div class="meta">📁 ${esc(s.file||'-')} · 👕 ${esc(s.style||'-')} · 📄 ${esc(s.fileName)} (${esc(s.sheet)})</div></div>
+  <div class="sact"><input type="date" class="inp" data-chg="sdate" value="${esc(s.date)}">
+  <select class="inp" data-chg="stpl">${templates.map(x=>`<option value="${esc(x.key)}" ${x.key===s.tpl?'selected':''}>SOP: ${esc(x.name)}</option>`).join('')}</select>
+  <button class="btn primary" data-act="export">⬇️ Excel</button><button class="btn danger" data-act="delcur">🗑️ Hapus Sesi</button></div></div>
+  <nav class="tabs">${tabs.map(([k,l])=>`<button class="${state.tab===k?'on':''}" data-act="tab" data-k="${k}">${l}</button>`).join('')}</nav>
+  <div>${state.tab==='check'?tabCheck(s,st):state.tab==='out'?tabOut(s,st):state.tab==='data'?tabData(s,st):tabDash(s,st,t)}</div>`;
+}
+const brow=(l,d,t)=>{const p=t?d/t:0;return `<div class="brow"><div>${l}</div><div class="bar"><i class="${cls(p)}" style="width:${p*100}%"></i></div><div class="bv t-${t?cls(p):''}">${t?pctTxt(p):'-'} <small>${d}/${t}</small></div></div>`};
+function tabDash(s,st,t){
+  const A=st.active,pic={};
+  A.forEach(x=>x.b.i.forEach(([_,p],ii)=>{const k=p||'-';pic[k]=pic[k]||{t:0,d:0};x.ops.forEach(n=>{pic[k].t++;if(s.checks[key(x.bi,ii,n)])pic[k].d++})}));
+  const per=[...st.per].sort((a,b)=>a.done/a.tot-b.done/b.tot);
+  if(!A.length)return `<div class="card empty">Belum ada proses di database yang cocok dengan SOP <b>${esc(t.name)}</b>.<br>Cek pilihan template SOP di atas, atau atur mapping di tab Checklist.</div>`;
+  return `<div class="kpis">${kpi('👥 Total Operator',st.opCount)}${kpi('⚙️ Proses SOP',st.procCount,'','proses aktif')}
+  ${kpi('📋 Check Point',fmtN(st.total))}${kpi('✅ Sudah ☑',fmtN(st.done),'g')}${kpi('⏳ Belum ☐',fmtN(st.pending),'r')}${kpi('🎯 % Compliance',pctTxt(st.pct),cls(st.pct))}</div>
+  <div class="two"><div class="card"><h3>Compliance per Proses</h3>${A.map(x=>brow(`<a data-act="gocheck" data-bi="${x.bi}" style="cursor:pointer">${esc(cleanT(x.b.t))}</a>`,x.done,x.tot)).join('')}</div>
+  <div class="card"><h3>Compliance per PIC</h3>${Object.entries(pic).map(([k,v])=>brow(`<span class="pic pic-${norm(k)}">${esc(k)}</span>`,v.d,v.t)).join('')}
+  <p class="legend">☑ = Sesuai SOP • ☐ = Belum | Hijau ≥90% • Kuning 60–89% • Merah &lt;60%</p></div></div>
+  <div class="card"><h3>Compliance per Operator (terendah di atas)</h3>${per.map(o=>brow(`<b>${esc(o.name)}</b><br><small>${esc(o.proc.join(', '))}</small>`,o.done,o.tot)).join('')}</div>`;
+}
+function tabCheck(s,st){
+  const P=procs(s),B=state.showAll?st.blocks:st.active,hidden=st.blocks.length-st.active.length;
+  return `<div class="info">💡 Ketuk kotak untuk ☐/☑ • Ketuk <b>nama operator</b> untuk centang semua poinnya • Ketuk <b>nomor</b> untuk centang satu baris</div>
+  <div class="row sb wrap"><div class="chips">${B.map(x=>`<button class="chip" data-act="jump" data-bi="${x.bi}"><span class="dot ${x.tot?cls(x.pct):'n'}"></span>${x.bi+1}. ${esc(cleanT(x.b.t).split(' - ')[0].slice(0,32))}</button>`).join('')}</div>
+  <div class="row">${hidden?`<button class="btn" data-act="showall">${state.showAll?'🙈 Sembunyikan':'👁️ Atur mapping'} (${hidden})</button>`:''}<button class="btn danger" data-act="resetck">↺ Reset</button></div></div>
+  ${B.length?'':'<div class="card empty">Tidak ada proses yang cocok dengan SOP.</div>'}
+  ${B.map(x=>`<div class="card" id="blk-${x.bi}"><div class="bh"><div><h3>${x.bi+1}. ${esc(cleanT(x.b.t))}</h3>
+    <div class="bmeta">🔗 Proses database: <select class="inp" data-chg="map" data-bi="${x.bi}"><option value="">— tidak ada —</option>${P.map(p=>`<option value="${esc(p)}" ${p===x.p?'selected':''}>${esc(p)}</option>`).join('')}</select>
+    📅 Tgl Mulai: <input type="date" class="inp" data-chg="bdate" data-bi="${x.bi}" value="${esc((s.bdate||{})[x.bi]||'')}"></div></div>
+    <div class="bp t-${x.tot?cls(x.pct):''}">${x.tot?pctTxt(x.pct):'-'}<small>${x.done}/${x.tot} check • ${x.ops.length} operator</small></div></div>
+    ${x.ops.length?`<div class="tw" data-bi="${x.bi}"><table class="ck"><thead><tr><th class="sn">No</th><th class="st">Check Point</th><th>PIC</th>
+    ${x.ops.map(n=>`<th class="op" data-act="opall" data-bi="${x.bi}" data-n="${esc(n)}">${esc(n)}</th>`).join('')}</tr></thead><tbody>
+    ${x.b.i.map(([tx,pc],ii)=>`<tr><td class="sn" data-act="rowall" data-bi="${x.bi}" data-ii="${ii}">${ii+1}</td><td class="st">${esc(tx)}</td><td><span class="pic pic-${norm(pc)}">${esc(pc)}</span></td>
+    ${x.ops.map(n=>{const on=s.checks[key(x.bi,ii,n)];return `<td class="cb ${on?'on':''}" data-act="tog" data-bi="${x.bi}" data-ii="${ii}" data-n="${esc(n)}">${on?'☑':'☐'}</td>`}).join('')}</tr>`).join('')}
+    </tbody><tfoot><tr><td class="sn"></td><td class="st">% per operator</td><td></td>${x.ops.map(n=>{const d=x.b.i.filter((_,ii)=>s.checks[key(x.bi,ii,n)]).length,p=d/x.b.i.length;return `<td class="t-${cls(p)}">${pctTxt(p)}</td>`}).join('')}</tr></tfoot></table></div>`
+    :`<div class="empty">Belum ada operator. Pilih proses database di atas untuk menghubungkan.</div>`}</div>`).join('')}`;
+}
+function tabOut(s,st){
+  const ops=sopOps(s,st);if(!ops.length)return '<div class="card empty">Tidak ada proses yang memiliki SOP.</div>';
+  const G={};ops.forEach(o=>{const g=G[o.process]=G[o.process]||{n:new Set(),t:0,a:0};g.n.add(o.name);g.t+=o.target||0;g.a+=o.actual||0});
+  const hrs=(s.hours||[]).map((l,j)=>({l,v:ops.reduce((a,o)=>a+(o.h[j]||0),0)})),mx=Math.max(1,...hrs.map(h=>h.v));
+  const achv=(a,t)=>t?`<span class="t-${cls(a/t)}"><b>${pctTxt(a/t)}</b></span>`:'-';
+  return `${hrs.length?`<div class="card"><h3>Output per Jam (proses SOP)</h3><div class="hchart">${hrs.map(h=>`<div class="hc"><b>${fmtN(h.v)}</b><i style="height:${h.v/mx*100}%"></i><small>${esc(h.l)}</small></div>`).join('')}</div></div>`:''}
+  <div class="card"><h3>Ringkasan per Proses</h3><div class="tw"><table class="tbl"><thead><tr><th>Proses</th><th class="n">Operator</th><th class="n">Target</th><th class="n">Actual</th><th class="n">Achv</th></tr></thead><tbody>
+  ${Object.entries(G).map(([p,g])=>`<tr><td>${esc(p)}</td><td class="n">${g.n.size}</td><td class="n">${fmtN(g.t)}</td><td class="n">${fmtN(g.a)}</td><td class="n">${achv(g.a,g.t)}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="card"><h3>Output per Operator</h3><div class="tw"><table class="tbl"><thead><tr><th>Counter</th><th>Nama</th><th>Proses</th><th>Mesin</th><th class="n">Target</th><th class="n">Actual</th><th class="n">Achv</th></tr></thead><tbody>
+  ${ops.map(o=>`<tr><td>${esc(o.counter)}</td><td><b>${esc(o.name)}</b></td><td>${esc(o.process)}</td><td>${esc(o.machine)}</td><td class="n">${fmtN(o.target)}</td><td class="n">${fmtN(o.actual)}</td><td class="n">${achv(o.actual||0,o.target)}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function tabData(s,st){
+  const ops=sopOps(s,st);
+  return `<div class="toolbar"><input id="dq" class="inp" style="flex:1" placeholder="🔍 Cari nama / proses / counter..."></div>
+  <div class="card"><div class="tw"><table class="tbl" id="dtbl"><thead><tr><th>Seq</th><th>Proses</th><th>Mesin</th><th>Counter#</th><th>MC Code</th><th>User ID</th><th>Nama</th><th class="n">Target</th><th class="n">Actual</th><th class="n">Avg</th><th class="n">WT</th></tr></thead><tbody>
+  ${ops.map(o=>`<tr><td>${esc(o.seq)}</td><td>${esc(o.process)}</td><td>${esc(o.machine)}</td><td>${esc(o.counter)}</td><td>${esc(o.mc)}</td><td>${esc(o.uid)}</td><td><b>${esc(o.name)}</b></td><td class="n">${fmtN(o.target)}</td><td class="n">${fmtN(o.actual)}</td><td class="n">${fmtN(o.avg)}</td><td class="n">${fmtN(o.wt)}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+/* ================= VIEW: TEMPLATE ================= */
+function viewTpl(){
+  return `<div class="shead"><button class="btn" data-act="home">← Sesi</button><div class="stitle"><h2>📚 Template SOP</h2></div>
+  <button class="btn" data-act="tplreset">↺ Reset template bawaan</button><button class="btn primary" data-act="upload">⬆️ Import dari Excel</button></div>
+  <div class="info">Format sheet SOP: baris judul <b>No. | Nama Proses | PIC</b>, lalu baris check point bernomor 1, 2, 3... (seperti sheet T-Shirt / Legging). Mapping opsional: kolom berjudul "Proses di ..." | "Proses di Database". Nama sheet = nama template (contoh "Polo", "Jogger").</div>
+  ${templates.map(t=>`<div class="card"><div class="row sb wrap"><div><h3>${esc(t.name)} ${t.builtin?'<span class="badge">bawaan</span>':''}</h3>
+  <div class="meta">${t.blocks.length} proses · ${t.blocks.reduce((a,b)=>a+b.i.length,0)} check point · dipakai ${sessions.filter(s=>s.tpl===t.key).length} sesi</div></div>
+  <div class="row"><button class="btn" data-act="tplview" data-k="${esc(t.key)}">${state.tplOpen===t.key?'Tutup':'Lihat'}</button><button class="btn danger" data-act="tpldel" data-k="${esc(t.key)}">Hapus</button></div></div>
+  ${state.tplOpen===t.key?t.blocks.map((b,bi)=>`<div style="margin-top:12px"><b>${bi+1}. ${esc(b.t)}</b> <small class="meta">→ ${esc(b.m||'(auto)')}</small><ol style="margin:6px 0">${b.i.map(([x,p])=>`<li>${esc(x)} <span class="pic pic-${norm(p)}">${esc(p)}</span></li>`).join('')}</ol></div>`).join(''):''}</div>`).join('')}`;
+}
+
+/* ================= EXPORT / BACKUP ================= */
+function exportXlsx(s){
+  const st=stats(s),t=tplOf(s),A=st.active,ops=sopOps(s,st),wb=XLSX.utils.book_new();
+  const sum=[['PERFORMANCE ASSESSMENT SOP'],[],['Line',s.line],['Produk',t.name],['Tanggal',fmtD(s.date)],['File#',s.file],['Style#',s.style],[],
+    ['Total Operator',st.opCount],['Proses SOP',st.procCount],['Total Check Point',st.total],['Sudah ☑',st.done],['Belum ☐',st.pending],['% Compliance',pctTxt(st.pct)],[],
+    ['Proses SOP','Proses Database','Tgl Mulai','Operator','Check Point','Sudah','% Compliance'],
+    ...A.map(x=>[cleanT(x.b.t),x.p,(s.bdate||{})[x.bi]||'',x.ops.length,x.tot,x.done,pctTxt(x.pct)])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Summary');
+  const ck=[];A.forEach(x=>{ck.push([`${x.bi+1}. ${cleanT(x.b.t)}`,'Tgl Mulai: '+((s.bdate||{})[x.bi]||'-')]);ck.push(['No.','Check Point','PIC',...x.ops]);
+    x.b.i.forEach(([tx,p],ii)=>ck.push([ii+1,tx,p,...x.ops.map(n=>s.checks[key(x.bi,ii,n)]?'☑':'☐')]));ck.push([])});
+  const wsC=XLSX.utils.aoa_to_sheet(ck);wsC['!cols']=[{wch:5},{wch:60},{wch:9}];XLSX.utils.book_append_sheet(wb,wsC,'Checklist');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Operator','Proses','Sudah','Total','% Compliance'],...st.per.map(o=>[o.name,o.proc.join(', '),o.done,o.tot,pctTxt(o.done/o.tot)])]),'Operator');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Seq','Process','Machine','Counter#','Machine Code','User ID','User Name','Target Qty','Actual Qty','Avg Qty','Work Time',...(s.hours||[])],
+    ...ops.map(o=>[o.seq,o.process,o.machine,o.counter,o.mc,o.uid,o.name,o.target,o.actual,o.avg,o.wt,...o.h])]),'Database');
+  XLSX.writeFile(wb,`Assessment_${s.line}_${t.name}_${s.date||'nodate'}.xlsx`);
+}
+
+/* ================= EVENT ================= */
+function render(){
+  const app=$('#app');
+  if(state.view==='session'&&cur())app.innerHTML=viewSession();
+  else if(state.view==='tpl')app.innerHTML=viewTpl();
+  else{state.view='home';app.innerHTML=viewHome()}
+}
+function refresh(){const y=scrollY,sl={};document.querySelectorAll('.tw[data-bi]').forEach(e=>sl[e.dataset.bi]=e.scrollLeft);render();
+  document.querySelectorAll('.tw[data-bi]').forEach(e=>e.scrollLeft=sl[e.dataset.bi]||0);scrollTo(0,y)}
+function setMany(ks){const s=cur(),all=ks.every(k=>s.checks[k]);ks.forEach(k=>{if(all)delete s.checks[k];else s.checks[k]=1});save();refresh()}
+const ACT={
+  upload:()=>$('#file').click(),
+  open:d=>{
+    if(state.selMode){const i=state.sel.indexOf(d.id);if(i>=0)state.sel.splice(i,1);else state.sel.push(d.id);$('#list').innerHTML=listHtml();return}
+    state.sid=d.id;state.view='session';state.tab='dash';state.showAll=false;render();scrollTo(0,0)},
+  del:d=>deleteSessions([d.id]),
+  delcur:()=>deleteSessions([state.sid]),
+  selmode:()=>{state.selMode=!state.selMode;state.sel=[];render()},
+  selall:()=>{const ids=filtered().map(x=>x.s.id);state.sel=ids.every(id=>state.sel.includes(id))?[]:ids;$('#list').innerHTML=listHtml()},
+  delsel:()=>deleteSessions([...state.sel]),
+  undo:()=>{if(!trash.length)return;sessions.push(...trash);const n=trash.length;trash=[];save();render();$('#toast').classList.remove('show');setTimeout(()=>toast(`↩️ ${n} sesi dikembalikan`),300)},
+  home:()=>{state.view='home';state.selMode=false;state.sel=[];render();scrollTo(0,0)},
+  tab:d=>{state.tab=d.k;render();scrollTo(0,0)},
+  gocheck:d=>{state.tab='check';render();setTimeout(()=>ACT.jump(d),50)},
+  tog:d=>{const s=cur(),k=key(d.bi,d.ii,d.n);if(s.checks[k])delete s.checks[k];else s.checks[k]=1;save();refresh()},
+  opall:d=>setMany(tplOf(cur()).blocks[d.bi].i.map((_,ii)=>key(d.bi,ii,d.n))),
+  rowall:d=>setMany(stats(cur()).blocks[d.bi].ops.map(n=>key(d.bi,d.ii,n))),
+  jump:d=>{const el=document.getElementById('blk-'+d.bi);if(el)scrollTo({top:el.getBoundingClientRect().top+scrollY-130,behavior:'smooth'})},
+  resetck:()=>{if(confirm('Reset semua centang di sesi ini?')){cur().checks={};save();refresh()}},
+  showall:()=>{state.showAll=!state.showAll;refresh()},
+  export:()=>exportXlsx(cur()),
+  tpl:()=>{state.view='tpl';state.selMode=false;state.sel=[];render();scrollTo(0,0)},
+  tplview:d=>{state.tplOpen=state.tplOpen===d.k?null:d.k;render()},
+  tpldel:d=>{const n=sessions.filter(s=>s.tpl===d.k).length;if(confirm(`Hapus template ini?${n?`\n⚠️ ${n} sesi memakai template ini.`:''}`)){templates=templates.filter(t=>t.key!==d.k);save();render()}},
+  tplreset:()=>{if(!confirm('Kembalikan template T-Shirt & Legging ke versi bawaan?'))return;
+    BUILTIN.forEach(b=>{const i=templates.findIndex(t=>norm(t.name)===norm(b.name));const c=clone(b);if(i>=0)templates[i]={...c,key:templates[i].key};else templates.push(c)});save();render()},
+  backup:()=>{download(`Backup_SOP_Assessment_${new Date().toISOString().slice(0,10)}.json`,new Blob([JSON.stringify({v:1,sessions,templates})],{type:'application/json'}));toast('💾 Backup diunduh')},
+  restore:()=>$('#backupFile').click()
+};
+const CHG={
+  fprod:el=>{state.fprod=el.value;$('#list').innerHTML=listHtml()},
+  sort:el=>{state.sort=el.value;$('#list').innerHTML=listHtml()},
+  sdate:el=>{cur().date=el.value;save()},
+  stpl:el=>{const s=cur();if(Object.keys(s.checks).length&&!confirm('Ganti template SOP akan mereset checklist sesi ini. Lanjut?')){el.value=s.tpl;return}
+    s.tpl=el.value;s.map={};s.checks={};s.bdate={};save();render()},
+  map:el=>{const s=cur(),bi=el.dataset.bi;s.map=s.map||{};s.map[bi]=el.value;
+    Object.keys(s.checks).forEach(k=>{if(k.startsWith(bi+'|'))delete s.checks[k]});save();refresh()},
+  bdate:el=>{const s=cur();s.bdate=s.bdate||{};s.bdate[el.dataset.bi]=el.value;save()}
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;e.stopPropagation();ACT[el.dataset.act]&&ACT[el.dataset.act](el.dataset,el,e)});
+document.addEventListener('change',e=>{const el=e.target.closest('[data-chg]');if(el&&CHG[el.dataset.chg])CHG[el.dataset.chg](el)});
+document.addEventListener('input',e=>{
+  if(e.target.id==='q'){state.q=e.target.value;$('#list').innerHTML=listHtml()}
+  if(e.target.id==='dq'){const q=e.target.value.toLowerCase();document.querySelectorAll('#dtbl tbody tr').forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none')}
+});
+$('#file').addEventListener('change',e=>{if(e.target.files.length)handleFiles([...e.target.files]);e.target.value=''});
+$('#backupFile').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const d=JSON.parse(await f.text());let n=0;
+    (d.templates||[]).forEach(t=>{const i=templates.findIndex(x=>x.key===t.key);if(i>=0)templates[i]=t;else templates.push(t)});
+    (d.sessions||[]).forEach(s=>{const i=sessions.findIndex(x=>x.id===s.id);if(i>=0)sessions[i]=s;else sessions.push(s);n++});
+    save();render();toast(`♻️ ${n} sesi dipulihkan`)}catch(err){toast('❌ File backup tidak valid')}
+});
+setInterval(()=>{$('#clock').textContent=new Date().toLocaleString('id-ID',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})},1000);
+render();
+</script>
+</body>
+</html>

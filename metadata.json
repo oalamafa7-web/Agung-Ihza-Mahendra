@@ -1,0 +1,8 @@
+{
+  "name": "Remix Performance Assessment SOP - Line Production",
+  "description": "Aplikasi dan penilaian kepatuhan SOP operator line sewing produksi garment dengan checklist interaktif, analisis output, dan integrasi Excel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
