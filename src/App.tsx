@@ -9,7 +9,15 @@ import { SessionDetailView } from './components/SessionDetailView';
 import { TemplateManagerModal } from './components/TemplateManagerModal';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { fmtD } from './utils/sopUtils';
-import { RotateCcw, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { RotateCcw, CheckCircle2, AlertCircle, X, Cloud } from 'lucide-react';
+import {
+  isSupabaseConfigured,
+  fetchSessionsFromSupabase,
+  saveSessionToSupabase,
+  deleteSessionsFromSupabase,
+  fetchTemplatesFromSupabase,
+  saveTemplateToSupabase,
+} from './utils/supabaseClient';
 
 const LS_SESSIONS = 'sopa_sessions_v1';
 const LS_TEMPLATES = 'sopa_templates_v1';
@@ -93,6 +101,42 @@ export default function App() {
     }
   }, [templates]);
 
+  // Initial sync with Supabase if configured
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    let isMounted = true;
+    async function syncFromSupabase() {
+      try {
+        const cloudSessions = await fetchSessionsFromSupabase();
+        if (isMounted && cloudSessions && cloudSessions.length > 0) {
+          setSessions(cloudSessions);
+          showToast(`☁️ Terhubung ke Supabase: ${cloudSessions.length} sesi dimuat`, 'success');
+        }
+
+        const cloudTemplates = await fetchTemplatesFromSupabase();
+        if (isMounted && cloudTemplates && cloudTemplates.length > 0) {
+          setTemplates((prev) => {
+            const merged = [...prev];
+            cloudTemplates.forEach((ct) => {
+              const idx = merged.findIndex((m) => m.key === ct.key);
+              if (idx >= 0) merged[idx] = ct;
+              else merged.push(ct);
+            });
+            return merged;
+          });
+        }
+      } catch (e) {
+        console.error('Supabase initial sync failed:', e);
+      }
+    }
+
+    syncFromSupabase();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', canUndo = false) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type, canUndo });
@@ -137,6 +181,10 @@ export default function App() {
       setSessions(currentSessions);
       setTemplates(newTemplates);
 
+      if (isSupabaseConfigured) {
+        newSessions.forEach((s) => saveSessionToSupabase(s));
+      }
+
       showToast(
         `✅ Berhasil memproses Excel: ${addedCount} sesi baru ditambahkan, ${updatedCount} sesi diperbarui.`,
         'success'
@@ -176,6 +224,10 @@ export default function App() {
 
     if (activeSessionId && ids.includes(activeSessionId)) {
       setActiveSessionId(null);
+    }
+
+    if (isSupabaseConfigured) {
+      deleteSessionsFromSupabase(ids);
     }
 
     showToast(`🗑️ ${toDelete.length} sesi dihapus`, 'info', true);
@@ -309,7 +361,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100/90 text-slate-900 font-sans antialiased flex flex-col">
       {/* Top Header */}
-      <Header sessionCount={sessions.length} />
+      <Header sessionCount={sessions.length} isCloudConnected={isSupabaseConfigured} />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
@@ -320,6 +372,9 @@ export default function App() {
             onBack={() => setActiveSessionId(null)}
             onUpdateSession={(updated) => {
               setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+              if (isSupabaseConfigured) {
+                saveSessionToSupabase(updated);
+              }
             }}
             onDeleteSession={(id) => handleDeleteSessions([id])}
             onExportExcel={(s) => exportSessionToExcel(s, templates)}
@@ -363,7 +418,12 @@ export default function App() {
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         templates={templates}
-        onUpdateTemplates={setTemplates}
+        onUpdateTemplates={(updatedTemplates) => {
+          setTemplates(updatedTemplates);
+          if (isSupabaseConfigured) {
+            updatedTemplates.forEach((t) => saveTemplateToSupabase(t));
+          }
+        }}
         onTriggerUpload={() => excelFileInputRef.current?.click()}
         sessionUsage={templateUsage}
       />

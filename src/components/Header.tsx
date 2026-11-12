@@ -3,9 +3,10 @@ import { Factory, Calendar, Clock, Database } from 'lucide-react';
 
 interface HeaderProps {
   sessionCount: number;
+  isCloudConnected?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ sessionCount }) => {
+export const Header: React.FC<HeaderProps> = ({ sessionCount, isCloudConnected = false }) => {
   const [timeStr, setTimeStr] = useState<string>('');
 
   useEffect(() => {
@@ -50,9 +51,21 @@ export const Header: React.FC<HeaderProps> = ({ sessionCount }) => {
         </div>
 
         <div className="flex items-center space-x-3 text-xs sm:text-sm">
+          {isCloudConnected ? (
+            <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-semibold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Supabase Cloud</span>
+            </div>
+          ) : (
+            <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-400 text-xs">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              <span>Penyimpanan Lokal</span>
+            </div>
+          )}
+
           <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-300">
             <Database className="w-4 h-4 text-emerald-400" />
-            <span>{sessionCount} Sesi Aktif</span>
+            <span>{sessionCount} Sesi</span>
           </div>
 
           <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 font-mono text-xs">
