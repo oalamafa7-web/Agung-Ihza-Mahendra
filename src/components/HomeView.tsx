@@ -22,6 +22,7 @@ import {
   Shirt,
   Calendar,
   Factory,
+  Cloud,
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -46,6 +47,7 @@ interface HomeViewProps {
   onBackup: () => void;
   onRestore: () => void;
   onLoadDemo: () => void;
+  onOpenDatabaseConfig?: () => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -70,6 +72,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onBackup,
   onRestore,
   onLoadDemo,
+  onOpenDatabaseConfig,
 }) => {
   // Compute global stats
   const sessionStats = useMemo(() => {
@@ -521,9 +524,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {/* Bottom Bar: Templates & Backup/Restore */}
       <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-600">
         <div className="flex items-center gap-2">
+          {onOpenDatabaseConfig && (
+            <button
+              onClick={onOpenDatabaseConfig}
+              className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 font-semibold text-slate-800 flex items-center gap-2 shadow-2xs transition cursor-pointer"
+              title="Cek status database Supabase & konfigurasi tabel"
+            >
+              <Cloud className="w-4 h-4 text-emerald-600" />
+              Database Cloud (Supabase)
+            </button>
+          )}
           <button
             onClick={onOpenTemplates}
-            className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 font-semibold text-slate-800 flex items-center gap-2 shadow-2xs transition"
+            className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 font-semibold text-slate-800 flex items-center gap-2 shadow-2xs transition cursor-pointer"
           >
             <BookOpen className="w-4 h-4 text-blue-600" />
             Kelola Template SOP ({templates.length})

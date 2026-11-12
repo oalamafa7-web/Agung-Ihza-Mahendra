@@ -9,15 +9,17 @@ import { SessionDetailView } from './components/SessionDetailView';
 import { TemplateManagerModal } from './components/TemplateManagerModal';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { fmtD } from './utils/sopUtils';
-import { RotateCcw, CheckCircle2, AlertCircle, X, Cloud } from 'lucide-react';
+import { RotateCcw, CheckCircle2, AlertCircle, X, Cloud, Loader2 } from 'lucide-react';
 import {
   isSupabaseConfigured,
-  fetchSessionsFromSupabase,
-  saveSessionToSupabase,
-  deleteSessionsFromSupabase,
-  fetchTemplatesFromSupabase,
-  saveTemplateToSupabase,
-} from './utils/supabaseClient';
+  fetchAllSessions,
+  insertSession,
+  updateSession,
+  deleteSessions,
+  subscribeToSessionChanges,
+  MAIN_TABLE_NAME,
+} from './lib/supabaseClient';
+import { SupabaseConfigModal } from './components/SupabaseConfigModal';
 
 const LS_SESSIONS = 'sopa_sessions_v1';
 const LS_TEMPLATES = 'sopa_templates_v1';
@@ -63,6 +65,9 @@ export default function App() {
   // App routing / view state
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+  const [isDbModalOpen, setIsDbModalOpen] = useState<boolean>(false);
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(isSupabaseConfigured);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -84,12 +89,12 @@ export default function App() {
   const excelFileInputRef = useRef<HTMLInputElement | null>(null);
   const jsonRestoreInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Persist to localStorage
+  // Persist to localStorage (as offline cache fallback)
   useEffect(() => {
     try {
       localStorage.setItem(LS_SESSIONS, JSON.stringify(sessions));
     } catch (err) {
-      showToast('⚠️ Penyimpanan browser penuh! Lakukan Backup Data lalu hapus beberapa sesi lama.', 'error');
+      console.warn('LocalStorage save warning:', err);
     }
   }, [sessions]);
 
@@ -101,41 +106,74 @@ export default function App() {
     }
   }, [templates]);
 
-  // Initial sync with Supabase if configured
+  // READ: Initial load from Supabase & Subscribe to REAL-TIME updates
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) {
+      setIsLoadingDb(false);
+      return;
+    }
 
     let isMounted = true;
-    async function syncFromSupabase() {
-      try {
-        const cloudSessions = await fetchSessionsFromSupabase();
-        if (isMounted && cloudSessions && cloudSessions.length > 0) {
-          setSessions(cloudSessions);
-          showToast(`☁️ Terhubung ke Supabase: ${cloudSessions.length} sesi dimuat`, 'success');
-        }
+    setIsLoadingDb(true);
+    setDbError(null);
 
-        const cloudTemplates = await fetchTemplatesFromSupabase();
-        if (isMounted && cloudTemplates && cloudTemplates.length > 0) {
-          setTemplates((prev) => {
-            const merged = [...prev];
-            cloudTemplates.forEach((ct) => {
-              const idx = merged.findIndex((m) => m.key === ct.key);
-              if (idx >= 0) merged[idx] = ct;
-              else merged.push(ct);
-            });
-            return merged;
-          });
-        }
-      } catch (e) {
-        console.error('Supabase initial sync failed:', e);
+    async function loadData() {
+      const res = await fetchAllSessions();
+      if (!isMounted) return;
+
+      setIsLoadingDb(false);
+      if (res.error) {
+        setDbError(res.error);
+        showToast(`❌ Gagal terhubung ke Supabase (${MAIN_TABLE_NAME}): ${res.error}`, 'error');
+      } else if (res.data) {
+        setSessions(res.data);
+        showToast(`⚡ Real-time Supabase aktif: ${res.data.length} sesi termuat`, 'success');
       }
     }
 
-    syncFromSupabase();
+    loadData();
+
+    // Berlangganan perubahan real-time (INSERT, UPDATE, DELETE)
+    const channel = subscribeToSessionChanges(
+      (newSession) => {
+        setSessions((prev) => {
+          if (prev.some((s) => s.id === newSession.id)) return prev;
+          return [newSession, ...prev];
+        });
+        showToast(`⚡ Data baru disinkronkan dari Supabase: Line ${newSession.line}`, 'info');
+      },
+      (updatedSession) => {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === updatedSession.id ? updatedSession : s))
+        );
+      },
+      (deletedId) => {
+        setSessions((prev) => prev.filter((s) => s.id !== deletedId));
+      }
+    );
+
     return () => {
       isMounted = false;
+      if (channel) {
+        channel.unsubscribe();
+      }
     };
   }, []);
+
+  const reloadFromSupabase = async () => {
+    if (!isSupabaseConfigured) return;
+    setIsLoadingDb(true);
+    setDbError(null);
+    const res = await fetchAllSessions();
+    setIsLoadingDb(false);
+    if (res.error) {
+      setDbError(res.error);
+      showToast(`❌ Gagal memuat data: ${res.error}`, 'error');
+    } else if (res.data) {
+      setSessions(res.data);
+      showToast(`🔄 Data berhasil disinkronkan (${res.data.length} sesi)`, 'success');
+    }
+  };
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', canUndo = false) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -182,7 +220,12 @@ export default function App() {
       setTemplates(newTemplates);
 
       if (isSupabaseConfigured) {
-        newSessions.forEach((s) => saveSessionToSupabase(s));
+        newSessions.forEach(async (s) => {
+          const res = await updateSession(s);
+          if (res.error) {
+            console.warn('Gagal sync sesi ke Supabase:', res.error);
+          }
+        });
       }
 
       showToast(
@@ -227,7 +270,11 @@ export default function App() {
     }
 
     if (isSupabaseConfigured) {
-      deleteSessionsFromSupabase(ids);
+      deleteSessions(ids).then((res) => {
+        if (res.error) {
+          showToast(`⚠️ Gagal menghapus dari Supabase: ${res.error}`, 'error');
+        }
+      });
     }
 
     showToast(`🗑️ ${toDelete.length} sesi dihapus`, 'info', true);
@@ -361,10 +408,41 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100/90 text-slate-900 font-sans antialiased flex flex-col">
       {/* Top Header */}
-      <Header sessionCount={sessions.length} isCloudConnected={isSupabaseConfigured} />
+      <Header
+        sessionCount={sessions.length}
+        isCloudConnected={isSupabaseConfigured}
+        onOpenDatabaseConfig={() => setIsDbModalOpen(true)}
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        {/* Supabase Status Banners */}
+        {isLoadingDb && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-900 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs animate-pulse">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+              <span>Menghubungkan & memuat data terbaru dari database Supabase (tabel: {MAIN_TABLE_NAME})...</span>
+            </div>
+          </div>
+        )}
+
+        {dbError && (
+          <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-900 px-4 py-3 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>
+                <b>Koneksi Supabase Gagal:</b> {dbError}. Menggunakan cache penyimpanan browser (offline-first).
+              </span>
+            </div>
+            <button
+              onClick={() => setIsDbModalOpen(true)}
+              className="px-3 py-1 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 transition cursor-pointer"
+            >
+              Lihat Solusi / Setup
+            </button>
+          </div>
+        )}
+
         {activeSessionId && currentSession ? (
           <SessionDetailView
             session={currentSession}
@@ -373,7 +451,11 @@ export default function App() {
             onUpdateSession={(updated) => {
               setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
               if (isSupabaseConfigured) {
-                saveSessionToSupabase(updated);
+                updateSession(updated).then((res) => {
+                  if (res.error) {
+                    showToast(`⚠️ Gagal menyimpan ke cloud: ${res.error}`, 'error');
+                  }
+                });
               }
             }}
             onDeleteSession={(id) => handleDeleteSessions([id])}
@@ -409,21 +491,25 @@ export default function App() {
             onBackup={handleBackup}
             onRestore={() => jsonRestoreInputRef.current?.click()}
             onLoadDemo={handleLoadDemo}
+            onOpenDatabaseConfig={() => setIsDbModalOpen(true)}
           />
         )}
       </main>
+
+      {/* Supabase Database Connection Modal */}
+      <SupabaseConfigModal
+        isOpen={isDbModalOpen}
+        onClose={() => setIsDbModalOpen(false)}
+        onRefresh={reloadFromSupabase}
+        sessionCount={sessions.length}
+      />
 
       {/* Template Manager Modal */}
       <TemplateManagerModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         templates={templates}
-        onUpdateTemplates={(updatedTemplates) => {
-          setTemplates(updatedTemplates);
-          if (isSupabaseConfigured) {
-            updatedTemplates.forEach((t) => saveTemplateToSupabase(t));
-          }
-        }}
+        onUpdateTemplates={setTemplates}
         onTriggerUpload={() => excelFileInputRef.current?.click()}
         sessionUsage={templateUsage}
       />

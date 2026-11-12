@@ -4,9 +4,14 @@ import { Factory, Calendar, Clock, Database } from 'lucide-react';
 interface HeaderProps {
   sessionCount: number;
   isCloudConnected?: boolean;
+  onOpenDatabaseConfig?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ sessionCount, isCloudConnected = false }) => {
+export const Header: React.FC<HeaderProps> = ({
+  sessionCount,
+  isCloudConnected = false,
+  onOpenDatabaseConfig,
+}) => {
   const [timeStr, setTimeStr] = useState<string>('');
 
   useEffect(() => {
@@ -52,15 +57,23 @@ export const Header: React.FC<HeaderProps> = ({ sessionCount, isCloudConnected =
 
         <div className="flex items-center space-x-3 text-xs sm:text-sm">
           {isCloudConnected ? (
-            <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-semibold shadow-xs">
+            <button
+              onClick={onOpenDatabaseConfig}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-semibold shadow-xs cursor-pointer transition active:scale-95"
+              title="Klik untuk melihat status koneksi Supabase"
+            >
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>Supabase Cloud</span>
-            </div>
+            </button>
           ) : (
-            <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-400 text-xs">
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
+            <button
+              onClick={onOpenDatabaseConfig}
+              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 text-slate-300 text-xs cursor-pointer transition"
+              title="Klik untuk menghubungkan database Supabase"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
               <span>Penyimpanan Lokal</span>
-            </div>
+            </button>
           )}
 
           <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-300">
