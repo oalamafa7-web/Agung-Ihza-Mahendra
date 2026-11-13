@@ -34,6 +34,8 @@ import {
   Table as TableIcon,
   Search,
   ExternalLink,
+  Users,
+  Lock,
 } from 'lucide-react';
 import { ConfirmationModal } from './ConfirmationModal';
 
@@ -44,6 +46,8 @@ interface SessionDetailViewProps {
   onUpdateSession: (updated: Session) => void;
   onDeleteSession: (id: string) => void;
   onExportExcel: (session: Session) => void;
+  onOpenGoogleSheets?: (session: Session) => void;
+  currentUserUid?: string | null;
 }
 
 export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
@@ -53,6 +57,8 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   onUpdateSession,
   onDeleteSession,
   onExportExcel,
+  onOpenGoogleSheets,
+  currentUserUid,
 }) => {
   const [activeTab, setActiveTab] = useState<'dash' | 'check' | 'out' | 'data'>('dash');
   const [showAllBlocks, setShowAllBlocks] = useState<boolean>(false);
@@ -397,12 +403,54 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             {/* Export Excel */}
             <button
               onClick={() => onExportExcel(session)}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition"
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
               title="Download Hasil Audit ke format Excel (.xlsx)"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
               <span>Export Excel</span>
             </button>
+
+            {/* Sharing toggle for session owner in Firebase */}
+            {currentUserUid && (!session.ownerId || session.ownerId === currentUserUid) && (
+              <button
+                onClick={() =>
+                  onUpdateSession({
+                    ...session,
+                    isShared: !(session.isShared ?? true),
+                  })
+                }
+                className={`px-3 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition cursor-pointer ${
+                  session.isShared ?? true
+                    ? 'bg-orange-50 border-orange-300 text-orange-900 hover:bg-orange-100'
+                    : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                }`}
+                title="Atur apakah sesi ini dapat dilihat & diisi checklistnya oleh tim"
+              >
+                {session.isShared ?? true ? (
+                  <>
+                    <Users className="w-3.5 h-3.5 text-orange-600" />
+                    <span>Dibagikan ke Tim</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Pribadi</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Google Sheets */}
+            {onOpenGoogleSheets && (
+              <button
+                onClick={() => onOpenGoogleSheets(session)}
+                className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                title="Ekspor atau sinkronkan sesi ini ke Google Sheets"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Google Sheets</span>
+              </button>
+            )}
 
             {/* Delete Session */}
             <button

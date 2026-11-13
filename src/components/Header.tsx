@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Factory, Calendar, Clock, Database } from 'lucide-react';
+import { Factory, Clock, Database, FileSpreadsheet, Flame } from 'lucide-react';
 
 interface HeaderProps {
   sessionCount: number;
   isCloudConnected?: boolean;
   onOpenDatabaseConfig?: () => void;
+  onOpenGoogleSheets?: () => void;
+  firebaseUserEmail?: string | null;
+  onOpenFirebase?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   sessionCount,
   isCloudConnected = false,
   onOpenDatabaseConfig,
+  onOpenGoogleSheets,
+  firebaseUserEmail,
+  onOpenFirebase,
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
 
@@ -55,7 +61,43 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 text-xs sm:text-sm">
+        <div className="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm">
+          {onOpenFirebase && (
+            <button
+              onClick={onOpenFirebase}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border font-semibold shadow-xs cursor-pointer transition active:scale-95 ${
+                firebaseUserEmail
+                  ? 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-400/50 text-orange-200'
+                  : 'bg-slate-800/70 hover:bg-slate-700/70 border-slate-600 text-slate-200'
+              }`}
+              title={
+                firebaseUserEmail
+                  ? `Terhubung ke Firebase (${firebaseUserEmail})`
+                  : 'Login Google & Sinkronisasi Firebase Firestore'
+              }
+            >
+              <Flame
+                className={`w-4 h-4 ${
+                  firebaseUserEmail ? 'text-orange-400' : 'text-slate-400'
+                }`}
+              />
+              <span className="hidden sm:inline">
+                {firebaseUserEmail ? 'Firebase Sync' : 'Firebase'}
+              </span>
+            </button>
+          )}
+
+          {onOpenGoogleSheets && (
+            <button
+              onClick={onOpenGoogleSheets}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-teal-600/30 hover:bg-teal-600/50 border border-teal-400/40 text-teal-200 font-semibold shadow-xs cursor-pointer transition active:scale-95"
+              title="Impor atau ekspor data dengan Google Sheets"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-300" />
+              <span className="hidden sm:inline">Google Sheets</span>
+            </button>
+          )}
+
           {isCloudConnected ? (
             <button
               onClick={onOpenDatabaseConfig}

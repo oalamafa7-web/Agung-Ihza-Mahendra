@@ -1,0 +1,345 @@
+{
+  "entities": {
+    "UserPrivateProfile": {
+      "title": "UserPrivateProfile",
+      "description": "Private user account profile containing PII isolated under user ownership.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified user email address",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "description": "User role within the assessment app",
+          "enum": ["auditor", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt", "updatedAt"]
+    },
+    "UserPublicProfile": {
+      "title": "UserPublicProfile",
+      "description": "Public non-PII display profile for showing auditor names.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Public display name",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["uid", "displayName", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted admin marker document keyed by admin UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Admin Firebase Auth UID",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified admin email",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "AssessmentSession": {
+      "title": "AssessmentSession",
+      "description": "Sewing line SOP assessment session containing operator outputs, mapping, and checklist compliance state.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique session identifier",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the session creator",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Display name of the session creator",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "isShared": {
+          "type": "boolean",
+          "description": "Whether this session is shared for read-only visibility with verified signed-in team members"
+        },
+        "factory": {
+          "type": "string",
+          "description": "Factory identifier or name",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "line": {
+          "type": "string",
+          "description": "Production sewing line name or number",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "date": {
+          "type": "string",
+          "description": "Assessment date string (YYYY-MM-DD)",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "file": {
+          "type": "string",
+          "description": "Production file or PO number",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "style": {
+          "type": "string",
+          "description": "Garment style name or code",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Source Excel or Google Sheet filename",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "sheet": {
+          "type": "string",
+          "description": "Worksheet tab name",
+          "minLength": 0,
+          "maxLength": 100
+        },
+        "tpl": {
+          "type": "string",
+          "description": "SOP template key",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "ops": {
+          "type": "array",
+          "description": "Bounded list of operator rows in the sewing line (max 200)"
+        },
+        "hours": {
+          "type": "array",
+          "description": "Bounded list of hourly column labels (max 24)"
+        },
+        "map": {
+          "type": "object",
+          "description": "Mapping of SOP block index to database process name"
+        },
+        "checks": {
+          "type": "object",
+          "description": "Completed SOP checkpoint keys mapped to 1"
+        },
+        "bdate": {
+          "type": "object",
+          "description": "Block start dates keyed by block index"
+        },
+        "created": {
+          "type": "number",
+          "description": "Client creation epoch milliseconds for sorting"
+        },
+        "googleSheetId": {
+          "type": "string",
+          "description": "Linked Google Spreadsheet ID",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "googleSheetUrl": {
+          "type": "string",
+          "description": "Linked Google Spreadsheet URL",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "ownerName",
+        "isShared",
+        "factory",
+        "line",
+        "date",
+        "file",
+        "style",
+        "fileName",
+        "sheet",
+        "tpl",
+        "ops",
+        "hours",
+        "map",
+        "checks",
+        "bdate",
+        "created",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SOPTemplateDoc": {
+      "title": "SOPTemplateDoc",
+      "description": "Custom or imported SOP checklist template stored in Firestore with map-based checkpoint items.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique template document ID",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the template creator",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "isShared": {
+          "type": "boolean",
+          "description": "Whether this custom template is shared for read visibility"
+        },
+        "key": {
+          "type": "string",
+          "description": "Template key identifier",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable template name",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "builtin": {
+          "type": "boolean",
+          "description": "Whether template is built-in"
+        },
+        "blocks": {
+          "type": "array",
+          "description": "Bounded list of SOP blocks (max 80)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "isShared",
+        "key",
+        "name",
+        "builtin",
+        "blocks",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/profile": {
+      "schema": {
+        "$ref": "#/entities/UserPrivateProfile"
+      },
+      "description": "Private PII user profile isolated to the owner and admins."
+    },
+    "/users/{userId}/public/profile": {
+      "schema": {
+        "$ref": "#/entities/UserPublicProfile"
+      },
+      "description": "Public display name profile without PII."
+    },
+    "/admins/{userId}": {
+      "schema": {
+        "$ref": "#/entities/AdminRecord"
+      },
+      "description": "Trusted admin role directory keyed by Firebase Auth UID."
+    },
+    "/sessions/{sessionId}": {
+      "schema": {
+        "$ref": "#/entities/AssessmentSession"
+      },
+      "description": "Line production SOP assessment sessions owned by users with optional shared read visibility."
+    },
+    "/templates/{templateId}": {
+      "schema": {
+        "$ref": "#/entities/SOPTemplateDoc"
+      },
+      "description": "Custom SOP templates created or imported by authenticated users."
+    }
+  }
+}

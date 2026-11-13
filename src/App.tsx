@@ -20,6 +20,19 @@ import {
   MAIN_TABLE_NAME,
 } from './lib/supabaseClient';
 import { SupabaseConfigModal } from './components/SupabaseConfigModal';
+import { GoogleSheetsModal } from './components/GoogleSheetsModal';
+import { FirebaseModal } from './components/FirebaseModal';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, isQuotaExceededError } from './lib/firebase';
+import {
+  syncUserProfile,
+  subscribeFirestoreSessions,
+  subscribeFirestoreTemplates,
+  upsertSessionToFirestore,
+  deleteSessionsFromFirestore,
+  saveCustomTemplateToFirestore,
+  deleteCustomTemplateFromFirestore,
+} from './lib/firestoreService';
 
 const LS_SESSIONS = 'sopa_sessions_v1';
 const LS_TEMPLATES = 'sopa_templates_v1';
@@ -66,6 +79,16 @@ export default function App() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isDbModalOpen, setIsDbModalOpen] = useState<boolean>(false);
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [firebaseAuthReady, setFirebaseAuthReady] = useState<boolean>(false);
+  const [defaultSharedInFirebase, setDefaultSharedInFirebase] = useState<boolean>(true);
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
+  const [isFirestoreQuotaError, setIsFirestoreQuotaError] = useState<boolean>(false);
+  const [googleSheetsModal, setGoogleSheetsModal] = useState<{
+    isOpen: boolean;
+    mode: 'import' | 'export';
+  }>({ isOpen: false, mode: 'import' });
   const [isLoadingDb, setIsLoadingDb] = useState<boolean>(isSupabaseConfigured);
   const [dbError, setDbError] = useState<string | null>(null);
 
@@ -160,6 +183,92 @@ export default function App() {
     };
   }, []);
 
+  // Track Firebase Auth readiness state
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setFirebaseAuthReady(true);
+      if (!user) {
+        setFirestoreError(null);
+        setIsFirestoreQuotaError(false);
+      }
+    });
+    return () => unsubAuth();
+  }, []);
+
+  // Helper to surface Firestore permission/quota errors cleanly
+  const handleFirestoreUiError = (err: unknown) => {
+    const quota = isQuotaExceededError(err);
+    setIsFirestoreQuotaError(quota);
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    setFirestoreError(
+      quota
+        ? 'Kuota harian gratis Firestore tercapai. Kuota akan direset besok.'
+        : rawMsg
+    );
+    showToast(
+      quota
+        ? 'Kuota harian Firestore tercapai. Coba lagi besok atau upgrade plan.'
+        : 'Gagal sinkronisasi dengan Firestore.',
+      'error'
+    );
+  };
+
+  // Attach Firestore real-time listeners ONLY when Firebase Auth is ready and user is authenticated
+  useEffect(() => {
+    if (!firebaseAuthReady || !firebaseUser || !firebaseUser.emailVerified) {
+      return;
+    }
+
+    let active = true;
+    setFirestoreError(null);
+    setIsFirestoreQuotaError(false);
+
+    syncUserProfile(firebaseUser).catch((err) => {
+      if (active) handleFirestoreUiError(err);
+    });
+
+    const unsubSessions = subscribeFirestoreSessions(
+      firebaseUser.uid,
+      (remoteSessions) => {
+        if (!active) return;
+        setSessions((prev) => {
+          const remoteIds = new Set(remoteSessions.map((r) => r.id));
+          const localOnly = prev.filter((s) => !s.ownerId && !remoteIds.has(s.id));
+          return [...remoteSessions, ...localOnly].sort(
+            (a, b) => (b.created || 0) - (a.created || 0)
+          );
+        });
+      },
+      (err) => {
+        if (active) handleFirestoreUiError(err);
+      }
+    );
+
+    const unsubTemplates = subscribeFirestoreTemplates(
+      firebaseUser.uid,
+      (remoteCustom) => {
+        if (!active) return;
+        setTemplates((prev) => {
+          const remoteKeys = new Set(remoteCustom.map((t) => t.key));
+          const preserved = prev.filter(
+            (t) => (t.builtin || !t.ownerId) && !remoteKeys.has(t.key)
+          );
+          return [...preserved, ...remoteCustom];
+        });
+      },
+      (err) => {
+        if (active) handleFirestoreUiError(err);
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubSessions();
+      unsubTemplates();
+    };
+  }, [firebaseAuthReady, firebaseUser]);
+
   const reloadFromSupabase = async () => {
     if (!isSupabaseConfigured) return;
     setIsLoadingDb(true);
@@ -184,49 +293,144 @@ export default function App() {
     }, canUndo ? 8000 : 3500);
   };
 
+  // Shared merge + Supabase sync helper for Excel & Google Sheets imports
+  const mergeAndSyncSessions = (newSessions: Session[], newTemplates: SOPTemplate[]) => {
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    const currentSessions = [...sessions];
+    const toSync: Session[] = [];
+
+    newSessions.forEach((rawSession) => {
+      const s: Session =
+        firebaseUser && firebaseUser.emailVerified
+          ? {
+              ...rawSession,
+              ownerId: rawSession.ownerId || firebaseUser.uid,
+              ownerName:
+                rawSession.ownerName ||
+                firebaseUser.displayName ||
+                firebaseUser.email ||
+                'Auditor',
+              isShared:
+                rawSession.isShared !== undefined
+                  ? rawSession.isShared
+                  : defaultSharedInFirebase,
+            }
+          : rawSession;
+
+      const dupIdx = currentSessions.findIndex(
+        (x) => x.line === s.line && x.file === s.file && x.date === s.date && x.tpl === s.tpl
+      );
+
+      if (dupIdx >= 0) {
+        // Keep existing checklist data, update operator & output data
+        const merged: Session = {
+          ...currentSessions[dupIdx],
+          ops: s.ops,
+          hours: s.hours,
+          fileName: s.fileName,
+          sheet: s.sheet,
+          ...(s.ownerId ? { ownerId: s.ownerId } : {}),
+          ...(s.ownerName ? { ownerName: s.ownerName } : {}),
+          ...(s.isShared !== undefined ? { isShared: s.isShared } : {}),
+          ...(s.googleSheetId ? { googleSheetId: s.googleSheetId } : {}),
+          ...(s.googleSheetUrl ? { googleSheetUrl: s.googleSheetUrl } : {}),
+        };
+        currentSessions[dupIdx] = merged;
+        toSync.push(merged);
+        updatedCount++;
+      } else {
+        currentSessions.unshift(s);
+        toSync.push(s);
+        addedCount++;
+      }
+    });
+
+    setSessions(currentSessions);
+    setTemplates(newTemplates);
+
+    if (firebaseUser && firebaseUser.emailVerified) {
+      toSync.forEach((s) => {
+        upsertSessionToFirestore(s, firebaseUser, defaultSharedInFirebase).catch(
+          handleFirestoreUiError
+        );
+      });
+      newTemplates
+        .filter((t) => !t.builtin)
+        .forEach((t) => {
+          saveCustomTemplateToFirestore(t, firebaseUser, defaultSharedInFirebase).catch(
+            handleFirestoreUiError
+          );
+        });
+    }
+
+    if (isSupabaseConfigured) {
+      toSync.forEach(async (s) => {
+        const res = await updateSession(s);
+        if (res.error) {
+          console.warn('Gagal sync sesi ke Supabase:', res.error);
+        }
+      });
+    }
+
+    return { addedCount, updatedCount };
+  };
+
+  // Manual one-click sync of all local sessions & custom templates to Cloud Firestore
+  const handleSyncLocalToFirestore = async () => {
+    if (!firebaseUser || !firebaseUser.emailVerified) {
+      throw new Error('Silakan login dengan akun Google yang terverifikasi terlebih dahulu.');
+    }
+    const updatedSessions = sessions.map((s) => ({
+      ...s,
+      ownerId: s.ownerId || firebaseUser.uid,
+      ownerName: s.ownerName || firebaseUser.displayName || firebaseUser.email || 'Auditor',
+      isShared: s.isShared !== undefined ? s.isShared : defaultSharedInFirebase,
+    }));
+    for (const s of updatedSessions) {
+      if (s.ownerId === firebaseUser.uid) {
+        await upsertSessionToFirestore(s, firebaseUser, defaultSharedInFirebase);
+      }
+    }
+    for (const t of templates) {
+      if (!t.builtin && (!t.ownerId || t.ownerId === firebaseUser.uid)) {
+        await saveCustomTemplateToFirestore(t, firebaseUser, defaultSharedInFirebase);
+      }
+    }
+    setSessions(updatedSessions);
+    showToast('Seluruh sesi berhasil disinkronkan ke Cloud Firestore.', 'success');
+  };
+
+  // Link an existing session to a Google Spreadsheet ID & URL
+  const handleLinkSessionToSheet = (
+    sessionId: string,
+    spreadsheetId: string,
+    spreadsheetUrl: string
+  ) => {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? { ...s, googleSheetId: spreadsheetId, googleSheetUrl: spreadsheetUrl }
+          : s
+      )
+    );
+    const target = sessions.find((s) => s.id === sessionId);
+    if (target && firebaseUser && firebaseUser.emailVerified) {
+      upsertSessionToFirestore(
+        { ...target, googleSheetId: spreadsheetId, googleSheetUrl: spreadsheetUrl },
+        firebaseUser,
+        defaultSharedInFirebase
+      ).catch(handleFirestoreUiError);
+    }
+  };
+
   // Upload Excel handler
   const handleExcelFiles = async (files: FileList | File[]) => {
     try {
       const fileArray = Array.from(files);
       const { sessions: newSessions, newTemplates } = await parseExcelFiles(fileArray, templates);
-
-      let addedCount = 0;
-      let updatedCount = 0;
-
-      const currentSessions = [...sessions];
-
-      newSessions.forEach((s) => {
-        const dupIdx = currentSessions.findIndex(
-          (x) => x.line === s.line && x.file === s.file && x.date === s.date && x.tpl === s.tpl
-        );
-
-        if (dupIdx >= 0) {
-          // Keep existing checklist data, update operator & output data
-          currentSessions[dupIdx] = {
-            ...currentSessions[dupIdx],
-            ops: s.ops,
-            hours: s.hours,
-            fileName: s.fileName,
-            sheet: s.sheet,
-          };
-          updatedCount++;
-        } else {
-          currentSessions.unshift(s);
-          addedCount++;
-        }
-      });
-
-      setSessions(currentSessions);
-      setTemplates(newTemplates);
-
-      if (isSupabaseConfigured) {
-        newSessions.forEach(async (s) => {
-          const res = await updateSession(s);
-          if (res.error) {
-            console.warn('Gagal sync sesi ke Supabase:', res.error);
-          }
-        });
-      }
+      const { addedCount, updatedCount } = mergeAndSyncSessions(newSessions, newTemplates);
 
       showToast(
         `✅ Berhasil memproses Excel: ${addedCount} sesi baru ditambahkan, ${updatedCount} sesi diperbarui.`,
@@ -267,6 +471,15 @@ export default function App() {
 
     if (activeSessionId && ids.includes(activeSessionId)) {
       setActiveSessionId(null);
+    }
+
+    if (firebaseUser && firebaseUser.emailVerified) {
+      const firestoreOwnedIds = toDelete
+        .filter((s) => s.ownerId === firebaseUser.uid)
+        .map((s) => s.id);
+      if (firestoreOwnedIds.length > 0) {
+        deleteSessionsFromFirestore(firestoreOwnedIds).catch(handleFirestoreUiError);
+      }
     }
 
     if (isSupabaseConfigured) {
@@ -318,8 +531,18 @@ export default function App() {
 
   const handleUndoDelete = () => {
     if (trashBuffer.length === 0) return;
-    setSessions((prev) => [...trashBuffer, ...prev]);
-    const restoredCount = trashBuffer.length;
+    const toRestore = [...trashBuffer];
+    setSessions((prev) => [...toRestore, ...prev]);
+    if (firebaseUser && firebaseUser.emailVerified) {
+      toRestore.forEach((s) => {
+        if (s.ownerId === firebaseUser.uid) {
+          upsertSessionToFirestore(s, firebaseUser, defaultSharedInFirebase).catch(
+            handleFirestoreUiError
+          );
+        }
+      });
+    }
+    const restoredCount = toRestore.length;
     setTrashBuffer([]);
     setToast({ show: false, message: '' });
     setTimeout(() => {
@@ -412,6 +635,14 @@ export default function App() {
         sessionCount={sessions.length}
         isCloudConnected={isSupabaseConfigured}
         onOpenDatabaseConfig={() => setIsDbModalOpen(true)}
+        firebaseUserEmail={firebaseUser?.email || null}
+        onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+        onOpenGoogleSheets={() =>
+          setGoogleSheetsModal({
+            isOpen: true,
+            mode: activeSessionId ? 'export' : 'import',
+          })
+        }
       />
 
       {/* Main Content Area */}
@@ -450,6 +681,11 @@ export default function App() {
             onBack={() => setActiveSessionId(null)}
             onUpdateSession={(updated) => {
               setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+              if (firebaseUser && firebaseUser.emailVerified) {
+                upsertSessionToFirestore(updated, firebaseUser, defaultSharedInFirebase).catch(
+                  handleFirestoreUiError
+                );
+              }
               if (isSupabaseConfigured) {
                 updateSession(updated).then((res) => {
                   if (res.error) {
@@ -460,6 +696,8 @@ export default function App() {
             }}
             onDeleteSession={(id) => handleDeleteSessions([id])}
             onExportExcel={(s) => exportSessionToExcel(s, templates)}
+            onOpenGoogleSheets={() => setGoogleSheetsModal({ isOpen: true, mode: 'export' })}
+            currentUserUid={firebaseUser?.uid || null}
           />
         ) : (
           <HomeView
@@ -492,9 +730,44 @@ export default function App() {
             onRestore={() => jsonRestoreInputRef.current?.click()}
             onLoadDemo={handleLoadDemo}
             onOpenDatabaseConfig={() => setIsDbModalOpen(true)}
+            onOpenGoogleSheets={() => setGoogleSheetsModal({ isOpen: true, mode: 'import' })}
+            onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+            isFirebaseSignedIn={Boolean(firebaseUser?.emailVerified)}
           />
         )}
       </main>
+
+      {/* Firebase Auth & Firestore Sync Modal */}
+      <FirebaseModal
+        isOpen={isFirebaseModalOpen}
+        onClose={() => setIsFirebaseModalOpen(false)}
+        user={firebaseUser}
+        authReady={firebaseAuthReady}
+        sessionCount={sessions.length}
+        defaultShared={defaultSharedInFirebase}
+        onToggleDefaultShared={setDefaultSharedInFirebase}
+        onSyncLocalToFirestore={handleSyncLocalToFirestore}
+        firestoreError={firestoreError}
+        isQuotaError={isFirestoreQuotaError}
+      />
+
+      {/* Google Sheets Integration Modal */}
+      <GoogleSheetsModal
+        isOpen={googleSheetsModal.isOpen}
+        initialMode={googleSheetsModal.mode}
+        onClose={() => setGoogleSheetsModal((prev) => ({ ...prev, isOpen: false }))}
+        templates={templates}
+        sessions={sessions}
+        activeSession={currentSession || null}
+        onImportSuccess={(newSessions, newTemplates, sheetTitle) => {
+          const { addedCount, updatedCount } = mergeAndSyncSessions(newSessions, newTemplates);
+          showToast(
+            `✅ Impor dari "${sheetTitle}": ${addedCount} sesi baru, ${updatedCount} sesi diperbarui.`,
+            'success'
+          );
+        }}
+        onLinkSessionToSheet={handleLinkSessionToSheet}
+      />
 
       {/* Supabase Database Connection Modal */}
       <SupabaseConfigModal
@@ -509,7 +782,29 @@ export default function App() {
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         templates={templates}
-        onUpdateTemplates={setTemplates}
+        onUpdateTemplates={(nextTemplates) => {
+          if (firebaseUser && firebaseUser.emailVerified) {
+            const nextCustom = nextTemplates.filter((t) => !t.builtin);
+            const prevCustom = templates.filter((t) => !t.builtin);
+            const nextKeys = new Set(nextCustom.map((t) => t.key));
+
+            nextCustom.forEach((t) => {
+              if (!t.ownerId || t.ownerId === firebaseUser.uid) {
+                saveCustomTemplateToFirestore(t, firebaseUser, defaultSharedInFirebase).catch(
+                  handleFirestoreUiError
+                );
+              }
+            });
+            prevCustom.forEach((t) => {
+              if (!nextKeys.has(t.key) && t.ownerId === firebaseUser.uid) {
+                deleteCustomTemplateFromFirestore(t.firestoreId || t.key).catch(
+                  handleFirestoreUiError
+                );
+              }
+            });
+          }
+          setTemplates(nextTemplates);
+        }}
         onTriggerUpload={() => excelFileInputRef.current?.click()}
         sessionUsage={templateUsage}
       />

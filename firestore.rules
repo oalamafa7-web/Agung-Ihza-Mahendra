@@ -1,0 +1,267 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerified() && request.auth.token.email == 'oalamafa7@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerified() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // 3. Entity Validation Blueprints (Anti-Update-Gap)
+    function isValidPrivateProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) && data.uid == userId &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.role in ['auditor', 'admin'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPublicProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'updatedAt']) &&
+        isValidId(data.uid) && data.uid == userId &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        isValidId(data.uid) && data.uid == userId &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidSession(data, sessionId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'ownerName', 'isShared', 'factory', 'line', 'date',
+          'file', 'style', 'fileName', 'sheet', 'tpl', 'ops', 'hours',
+          'map', 'checks', 'bdate', 'created', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'ownerName', 'isShared', 'factory', 'line', 'date',
+          'file', 'style', 'fileName', 'sheet', 'tpl', 'ops', 'hours',
+          'map', 'checks', 'bdate', 'created', 'googleSheetId', 'googleSheetUrl',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) && data.id == sessionId &&
+        isValidId(data.ownerId) &&
+        data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 120 &&
+        data.isShared is bool &&
+        data.factory is string && data.factory.size() >= 1 && data.factory.size() <= 80 &&
+        data.line is string && data.line.size() >= 1 && data.line.size() <= 60 &&
+        data.date is string && data.date.size() <= 32 &&
+        data.file is string && data.file.size() <= 120 &&
+        data.style is string && data.style.size() <= 120 &&
+        data.fileName is string && data.fileName.size() <= 200 &&
+        data.sheet is string && data.sheet.size() <= 100 &&
+        data.tpl is string && data.tpl.size() >= 1 && data.tpl.size() <= 100 &&
+        data.ops is list && data.ops.size() <= 200 && (data.ops.size() == 0 || data.ops[0] is map) &&
+        data.hours is list && data.hours.size() <= 24 && (data.hours.size() == 0 || data.hours[0] is string) &&
+        data.map is map &&
+        data.checks is map &&
+        data.bdate is map &&
+        data.created is number &&
+        (!('googleSheetId' in data) || (data.googleSheetId is string && data.googleSheetId.size() <= 128)) &&
+        (!('googleSheetUrl' in data) || (data.googleSheetUrl is string && data.googleSheetUrl.size() <= 300)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTemplate(data, templateId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'isShared', 'key', 'name', 'builtin', 'blocks', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'isShared', 'key', 'name', 'builtin', 'blocks', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) && data.id == templateId &&
+        isValidId(data.ownerId) &&
+        data.isShared is bool &&
+        data.key is string && data.key.size() >= 1 && data.key.size() <= 100 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.builtin is bool &&
+        data.blocks is list && data.blocks.size() <= 80 && (data.blocks.size() == 0 || data.blocks[0] is map) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // 4. Users Collection (Split PII Isolation)
+    match /users/{userId} {
+      match /private/profile {
+        allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow list: if false;
+        allow create: if isValidId(userId) &&
+          isOwner(userId) &&
+          isValidPrivateProfile(incoming(), userId) &&
+          incoming().email == request.auth.token.email &&
+          (incoming().role == 'auditor' || isBootstrappedAdmin()) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) &&
+          isVerified() &&
+          isValidPrivateProfile(incoming(), userId) &&
+          incoming().uid == existing().uid &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time && (
+            (isOwner(userId) &&
+              incoming().role == existing().role &&
+              incoming().email == request.auth.token.email &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt'])) ||
+            (isAdmin() &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'updatedAt']))
+          );
+        allow delete: if isValidId(userId) && isAdmin();
+      }
+
+      match /public/profile {
+        allow get: if isValidId(userId) && isVerified();
+        allow list: if false;
+        allow create: if isValidId(userId) &&
+          isOwner(userId) &&
+          isValidPublicProfile(incoming(), userId) &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) &&
+          isOwner(userId) &&
+          isValidPublicProfile(incoming(), userId) &&
+          incoming().uid == existing().uid &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']);
+        allow delete: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      }
+    }
+
+    // 5. Admins Directory
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if false;
+      allow create: if isValidId(userId) &&
+        isAdmin() &&
+        isValidAdminRecord(incoming(), userId) &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 6. Assessment Sessions Collection
+    match /sessions/{sessionId} {
+      allow get: if isValidId(sessionId) && isVerified() && (
+        resource == null ||
+        existing().ownerId == request.auth.uid ||
+        existing().isShared == true ||
+        isAdmin()
+      );
+      allow list: if isVerified() && (
+        existing().ownerId == request.auth.uid ||
+        existing().isShared == true
+      );
+      allow create: if isValidId(sessionId) &&
+        isVerified() &&
+        isValidSession(incoming(), sessionId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(sessionId) &&
+        isValidSession(incoming(), sessionId) &&
+        incoming().id == existing().id &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().created == existing().created &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          // Tier 1 Action: Owner checklist/mapping audit update
+          (existing().ownerId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['checks', 'map', 'bdate', 'tpl', 'updatedAt'])) ||
+          // Tier 1 Action: Owner full Excel/Google Sheets data refresh or share toggle
+          (existing().ownerId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'factory', 'line', 'date', 'file', 'style', 'fileName', 'sheet',
+              'ops', 'hours', 'tpl', 'map', 'checks', 'bdate',
+              'isShared', 'googleSheetId', 'googleSheetUrl', 'updatedAt'
+            ])) ||
+          // Tier 2 Action: Verified collaborator updating checklist/mapping on a shared session
+          (existing().isShared == true &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['checks', 'map', 'bdate', 'updatedAt']))
+        );
+      allow delete: if isValidId(sessionId) && isVerified() && (
+        existing().ownerId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // 7. Custom SOP Templates Collection
+    match /templates/{templateId} {
+      allow get: if isValidId(templateId) && isVerified() && (
+        resource == null ||
+        existing().ownerId == request.auth.uid ||
+        existing().isShared == true ||
+        isAdmin()
+      );
+      allow list: if isVerified() && (
+        existing().ownerId == request.auth.uid ||
+        existing().isShared == true
+      );
+      allow create: if isValidId(templateId) &&
+        isVerified() &&
+        isValidTemplate(incoming(), templateId) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().builtin == false &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(templateId) &&
+        isValidTemplate(incoming(), templateId) &&
+        incoming().id == existing().id &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().builtin == existing().builtin &&
+        incoming().key == existing().key &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (existing().ownerId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'blocks', 'isShared', 'updatedAt']))
+        );
+      allow delete: if isValidId(templateId) && isVerified() && (
+        existing().ownerId == request.auth.uid || isAdmin()
+      );
+    }
+  }
+}

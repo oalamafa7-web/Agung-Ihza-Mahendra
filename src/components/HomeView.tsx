@@ -23,6 +23,9 @@ import {
   Calendar,
   Factory,
   Cloud,
+  FileSpreadsheet,
+  Flame,
+  Lock,
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -48,6 +51,9 @@ interface HomeViewProps {
   onRestore: () => void;
   onLoadDemo: () => void;
   onOpenDatabaseConfig?: () => void;
+  onOpenGoogleSheets?: () => void;
+  onOpenFirebase?: () => void;
+  isFirebaseSignedIn?: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -73,6 +79,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onRestore,
   onLoadDemo,
   onOpenDatabaseConfig,
+  onOpenGoogleSheets,
+  onOpenFirebase,
+  isFirebaseSignedIn,
 }) => {
   // Compute global stats
   const sessionStats = useMemo(() => {
@@ -182,6 +191,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
             >
               <Sparkles className="w-4 h-4 text-indigo-600" />
               Muat Data Contoh
+            </button>
+          )}
+
+          {onOpenGoogleSheets && (
+            <button
+              onClick={onOpenGoogleSheets}
+              className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition flex items-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-5 h-5" />
+              Google Sheets
             </button>
           )}
 
@@ -484,6 +503,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         {s.style}
                       </span>
                     )}
+                    {s.ownerId && (
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 ${
+                          s.isShared
+                            ? 'bg-orange-50 text-orange-800 border border-orange-200'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {s.isShared ? (
+                          <>
+                            <Users className="w-3 h-3" />
+                            Tim
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-3 h-3" />
+                            Pribadi
+                          </>
+                        )}
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-xs text-slate-500 flex items-center justify-between">
@@ -523,7 +563,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Bottom Bar: Templates & Backup/Restore */}
       <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-600">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenFirebase && (
+            <button
+              onClick={onOpenFirebase}
+              className="px-4 py-2.5 rounded-xl bg-white border border-orange-300 hover:bg-orange-50 font-semibold text-slate-800 flex items-center gap-2 shadow-2xs transition cursor-pointer"
+              title="Kelola login Google & sinkronisasi Cloud Firestore"
+            >
+              <Flame className={`w-4 h-4 ${isFirebaseSignedIn ? 'text-orange-600' : 'text-slate-400'}`} />
+              Firebase Firestore
+            </button>
+          )}
           {onOpenDatabaseConfig && (
             <button
               onClick={onOpenDatabaseConfig}

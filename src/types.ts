@@ -26,6 +26,9 @@ export interface SOPTemplate {
   name: string;
   builtin?: boolean;
   blocks: SOPBlock[];
+  firestoreId?: string;
+  ownerId?: string;
+  isShared?: boolean;
 }
 
 export interface Session {
@@ -44,6 +47,11 @@ export interface Session {
   checks: Record<string, 1>;
   bdate: Record<number, string>;
   created: number;
+  googleSheetId?: string;
+  googleSheetUrl?: string;
+  ownerId?: string;
+  ownerName?: string;
+  isShared?: boolean;
 }
 
 export interface BlockStat {
