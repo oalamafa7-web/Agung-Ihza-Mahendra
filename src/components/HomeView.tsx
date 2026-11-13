@@ -22,7 +22,6 @@ import {
   Shirt,
   Calendar,
   Factory,
-  Cloud,
   FileSpreadsheet,
   Flame,
   Lock,
@@ -50,7 +49,6 @@ interface HomeViewProps {
   onBackup: () => void;
   onRestore: () => void;
   onLoadDemo: () => void;
-  onOpenDatabaseConfig?: () => void;
   onOpenGoogleSheets?: () => void;
   onOpenFirebase?: () => void;
   isFirebaseSignedIn?: boolean;
@@ -78,7 +76,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onBackup,
   onRestore,
   onLoadDemo,
-  onOpenDatabaseConfig,
   onOpenGoogleSheets,
   onOpenFirebase,
   isFirebaseSignedIn,
@@ -572,16 +569,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             >
               <Flame className={`w-4 h-4 ${isFirebaseSignedIn ? 'text-orange-600' : 'text-slate-400'}`} />
               Firebase Firestore
-            </button>
-          )}
-          {onOpenDatabaseConfig && (
-            <button
-              onClick={onOpenDatabaseConfig}
-              className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 font-semibold text-slate-800 flex items-center gap-2 shadow-2xs transition cursor-pointer"
-              title="Cek status database Supabase & konfigurasi tabel"
-            >
-              <Cloud className="w-4 h-4 text-emerald-600" />
-              Database Cloud (Supabase)
             </button>
           )}
           <button

@@ -3,8 +3,6 @@ import { Factory, Clock, Database, FileSpreadsheet, Flame } from 'lucide-react';
 
 interface HeaderProps {
   sessionCount: number;
-  isCloudConnected?: boolean;
-  onOpenDatabaseConfig?: () => void;
   onOpenGoogleSheets?: () => void;
   firebaseUserEmail?: string | null;
   onOpenFirebase?: () => void;
@@ -12,8 +10,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   sessionCount,
-  isCloudConnected = false,
-  onOpenDatabaseConfig,
   onOpenGoogleSheets,
   firebaseUserEmail,
   onOpenFirebase,
@@ -67,22 +63,22 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenFirebase}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border font-semibold shadow-xs cursor-pointer transition active:scale-95 ${
                 firebaseUserEmail
-                  ? 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-400/50 text-orange-200'
-                  : 'bg-slate-800/70 hover:bg-slate-700/70 border-slate-600 text-slate-200'
+                  ? 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300'
+                  : 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-400/50 text-orange-200'
               }`}
               title={
                 firebaseUserEmail
-                  ? `Terhubung ke Firebase (${firebaseUserEmail})`
-                  : 'Login Google & Sinkronisasi Firebase Firestore'
+                  ? `Terhubung ke Firebase Firestore (${firebaseUserEmail})`
+                  : 'Login Google untuk sinkronisasi Firebase Firestore'
               }
             >
-              <Flame
-                className={`w-4 h-4 ${
-                  firebaseUserEmail ? 'text-orange-400' : 'text-slate-400'
-                }`}
-              />
+              {firebaseUserEmail ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              ) : (
+                <Flame className="w-4 h-4 text-orange-400" />
+              )}
               <span className="hidden sm:inline">
-                {firebaseUserEmail ? 'Firebase Sync' : 'Firebase'}
+                {firebaseUserEmail ? 'Firebase Cloud' : 'Firebase'}
               </span>
             </button>
           )}
@@ -95,26 +91,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-300" />
               <span className="hidden sm:inline">Google Sheets</span>
-            </button>
-          )}
-
-          {isCloudConnected ? (
-            <button
-              onClick={onOpenDatabaseConfig}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-semibold shadow-xs cursor-pointer transition active:scale-95"
-              title="Klik untuk melihat status koneksi Supabase"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Supabase Cloud</span>
-            </button>
-          ) : (
-            <button
-              onClick={onOpenDatabaseConfig}
-              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 text-slate-300 text-xs cursor-pointer transition"
-              title="Klik untuk menghubungkan database Supabase"
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span>Penyimpanan Lokal</span>
             </button>
           )}
 

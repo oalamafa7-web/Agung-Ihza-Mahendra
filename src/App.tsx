@@ -9,17 +9,7 @@ import { SessionDetailView } from './components/SessionDetailView';
 import { TemplateManagerModal } from './components/TemplateManagerModal';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { fmtD } from './utils/sopUtils';
-import { RotateCcw, CheckCircle2, AlertCircle, X, Cloud, Loader2 } from 'lucide-react';
-import {
-  isSupabaseConfigured,
-  fetchAllSessions,
-  insertSession,
-  updateSession,
-  deleteSessions,
-  subscribeToSessionChanges,
-  MAIN_TABLE_NAME,
-} from './lib/supabaseClient';
-import { SupabaseConfigModal } from './components/SupabaseConfigModal';
+import { RotateCcw, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { FirebaseModal } from './components/FirebaseModal';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -78,7 +68,6 @@ export default function App() {
   // App routing / view state
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
-  const [isDbModalOpen, setIsDbModalOpen] = useState<boolean>(false);
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [firebaseAuthReady, setFirebaseAuthReady] = useState<boolean>(false);
@@ -89,8 +78,6 @@ export default function App() {
     isOpen: boolean;
     mode: 'import' | 'export';
   }>({ isOpen: false, mode: 'import' });
-  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(isSupabaseConfigured);
-  const [dbError, setDbError] = useState<string | null>(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -128,60 +115,6 @@ export default function App() {
       console.error('Failed to save templates', err);
     }
   }, [templates]);
-
-  // READ: Initial load from Supabase & Subscribe to REAL-TIME updates
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setIsLoadingDb(false);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoadingDb(true);
-    setDbError(null);
-
-    async function loadData() {
-      const res = await fetchAllSessions();
-      if (!isMounted) return;
-
-      setIsLoadingDb(false);
-      if (res.error) {
-        setDbError(res.error);
-        showToast(`❌ Gagal terhubung ke Supabase (${MAIN_TABLE_NAME}): ${res.error}`, 'error');
-      } else if (res.data) {
-        setSessions(res.data);
-        showToast(`⚡ Real-time Supabase aktif: ${res.data.length} sesi termuat`, 'success');
-      }
-    }
-
-    loadData();
-
-    // Berlangganan perubahan real-time (INSERT, UPDATE, DELETE)
-    const channel = subscribeToSessionChanges(
-      (newSession) => {
-        setSessions((prev) => {
-          if (prev.some((s) => s.id === newSession.id)) return prev;
-          return [newSession, ...prev];
-        });
-        showToast(`⚡ Data baru disinkronkan dari Supabase: Line ${newSession.line}`, 'info');
-      },
-      (updatedSession) => {
-        setSessions((prev) =>
-          prev.map((s) => (s.id === updatedSession.id ? updatedSession : s))
-        );
-      },
-      (deletedId) => {
-        setSessions((prev) => prev.filter((s) => s.id !== deletedId));
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      if (channel) {
-        channel.unsubscribe();
-      }
-    };
-  }, []);
 
   // Track Firebase Auth readiness state
   useEffect(() => {
@@ -269,21 +202,6 @@ export default function App() {
     };
   }, [firebaseAuthReady, firebaseUser]);
 
-  const reloadFromSupabase = async () => {
-    if (!isSupabaseConfigured) return;
-    setIsLoadingDb(true);
-    setDbError(null);
-    const res = await fetchAllSessions();
-    setIsLoadingDb(false);
-    if (res.error) {
-      setDbError(res.error);
-      showToast(`❌ Gagal memuat data: ${res.error}`, 'error');
-    } else if (res.data) {
-      setSessions(res.data);
-      showToast(`🔄 Data berhasil disinkronkan (${res.data.length} sesi)`, 'success');
-    }
-  };
-
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', canUndo = false) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type, canUndo });
@@ -293,7 +211,7 @@ export default function App() {
     }, canUndo ? 8000 : 3500);
   };
 
-  // Shared merge + Supabase sync helper for Excel & Google Sheets imports
+  // Shared merge + Firestore sync helper for Excel & Google Sheets imports
   const mergeAndSyncSessions = (newSessions: Session[], newTemplates: SOPTemplate[]) => {
     let addedCount = 0;
     let updatedCount = 0;
@@ -363,15 +281,6 @@ export default function App() {
             handleFirestoreUiError
           );
         });
-    }
-
-    if (isSupabaseConfigured) {
-      toSync.forEach(async (s) => {
-        const res = await updateSession(s);
-        if (res.error) {
-          console.warn('Gagal sync sesi ke Supabase:', res.error);
-        }
-      });
     }
 
     return { addedCount, updatedCount };
@@ -480,14 +389,6 @@ export default function App() {
       if (firestoreOwnedIds.length > 0) {
         deleteSessionsFromFirestore(firestoreOwnedIds).catch(handleFirestoreUiError);
       }
-    }
-
-    if (isSupabaseConfigured) {
-      deleteSessions(ids).then((res) => {
-        if (res.error) {
-          showToast(`⚠️ Gagal menghapus dari Supabase: ${res.error}`, 'error');
-        }
-      });
     }
 
     showToast(`🗑️ ${toDelete.length} sesi dihapus`, 'info', true);
@@ -633,8 +534,6 @@ export default function App() {
       {/* Top Header */}
       <Header
         sessionCount={sessions.length}
-        isCloudConnected={isSupabaseConfigured}
-        onOpenDatabaseConfig={() => setIsDbModalOpen(true)}
         firebaseUserEmail={firebaseUser?.email || null}
         onOpenFirebase={() => setIsFirebaseModalOpen(true)}
         onOpenGoogleSheets={() =>
@@ -647,33 +546,6 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Supabase Status Banners */}
-        {isLoadingDb && (
-          <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-900 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs animate-pulse">
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-              <span>Menghubungkan & memuat data terbaru dari database Supabase (tabel: {MAIN_TABLE_NAME})...</span>
-            </div>
-          </div>
-        )}
-
-        {dbError && (
-          <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-900 px-4 py-3 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>
-                <b>Koneksi Supabase Gagal:</b> {dbError}. Menggunakan cache penyimpanan browser (offline-first).
-              </span>
-            </div>
-            <button
-              onClick={() => setIsDbModalOpen(true)}
-              className="px-3 py-1 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 transition cursor-pointer"
-            >
-              Lihat Solusi / Setup
-            </button>
-          </div>
-        )}
-
         {activeSessionId && currentSession ? (
           <SessionDetailView
             session={currentSession}
@@ -685,13 +557,6 @@ export default function App() {
                 upsertSessionToFirestore(updated, firebaseUser, defaultSharedInFirebase).catch(
                   handleFirestoreUiError
                 );
-              }
-              if (isSupabaseConfigured) {
-                updateSession(updated).then((res) => {
-                  if (res.error) {
-                    showToast(`⚠️ Gagal menyimpan ke cloud: ${res.error}`, 'error');
-                  }
-                });
               }
             }}
             onDeleteSession={(id) => handleDeleteSessions([id])}
@@ -729,7 +594,6 @@ export default function App() {
             onBackup={handleBackup}
             onRestore={() => jsonRestoreInputRef.current?.click()}
             onLoadDemo={handleLoadDemo}
-            onOpenDatabaseConfig={() => setIsDbModalOpen(true)}
             onOpenGoogleSheets={() => setGoogleSheetsModal({ isOpen: true, mode: 'import' })}
             onOpenFirebase={() => setIsFirebaseModalOpen(true)}
             isFirebaseSignedIn={Boolean(firebaseUser?.emailVerified)}
@@ -767,14 +631,6 @@ export default function App() {
           );
         }}
         onLinkSessionToSheet={handleLinkSessionToSheet}
-      />
-
-      {/* Supabase Database Connection Modal */}
-      <SupabaseConfigModal
-        isOpen={isDbModalOpen}
-        onClose={() => setIsDbModalOpen(false)}
-        onRefresh={reloadFromSupabase}
-        sessionCount={sessions.length}
       />
 
       {/* Template Manager Modal */}
